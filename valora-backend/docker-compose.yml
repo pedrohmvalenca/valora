@@ -1,0 +1,38 @@
+# docker-compose.yml — VALORA backend dev local
+# Postgres 15 pinned, porta 5433 (evita conflito com Postgres host),
+# healthcheck e volume persistente.
+#
+# Uso:
+#   docker compose up -d postgres        # sobe Postgres em background
+#   docker compose ps                    # status (deve mostrar "healthy")
+#   docker compose logs postgres         # logs
+#   docker compose down                  # para e remove containers (mantém volume)
+#   docker compose down -v               # para, remove containers E volume (dados perdidos)
+#
+# Conectar manualmente:
+#   docker exec -it valora-postgres psql -U valora_dev -d valora_local
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: valora-postgres
+    restart: unless-stopped
+    ports:
+      # Bind apenas em loopback — não expõe porta na LAN
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-valora_local}
+      POSTGRES_USER: ${POSTGRES_USER:-valora_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-valora_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-valora_dev} -d ${POSTGRES_DB:-valora_local}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 30s    # tolera cold start em máquinas lentas
+
+volumes:
+  postgres_data:
+    name: ${COMPOSE_PROJECT_NAME:-valora}_postgres_data

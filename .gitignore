@@ -1,0 +1,55 @@
+# ==========================================================================
+# .gitignore — VALORA monorepo (raiz)
+# Subprojetos (valora-backend/, valora-frontend/) têm seus próprios .gitignore
+# para artefatos específicos (target/, node_modules/, .env, etc.)
+# Aqui ficam só os ignores transversais (OS, IDEs, env vars na raiz, logs).
+# ==========================================================================
+
+# ----- OS junk -----
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ----- IDEs -----
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.fleet/
+*.sublime-workspace
+*.sublime-project
+
+# ----- Env vars (defesa em profundidade — subprojetos também ignoram) -----
+.env
+.env.local
+.env.*.local
+*.env
+
+# ----- Logs e caches transversais -----
+*.log
+logs/
+.cache/
+tmp/
+temp/
+
+# ----- Outputs de testes/relatórios na raiz -----
+coverage/
+.nyc_output/
+
+# ----- Documentação interna de planejamento (não pública) -----
+CLAUDE.md
+.claude/
+.agents/
+_bmad/
+_bmad-output/
+docs/
+
+# ----- Configuração local do dev (env vars de runtime) -----
+valora-frontend/.env.local

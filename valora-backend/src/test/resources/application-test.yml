@@ -1,0 +1,42 @@
+# Profile 'test' — usado por todo @SpringBootTest que estenda TestcontainersBaseTest.
+# O datasource real é injetado via @DynamicPropertySource a partir do container Postgres.
+# Os valores aqui são fallback / dummy.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:0/placeholder    # sobrescrito por DynamicPropertySource
+    username: test
+    password: test
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  mail:
+    host: localhost
+    port: 25
+
+valora:
+  jwt:
+    secret: test-only-secret-min-256-bits-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    expirationMinutes: 240
+    cookie:
+      secure: false                                   # tests rodam HTTP — cookie sem Secure
+  cors:
+    allowedOrigins: http://localhost:5173
+
+logging:
+  level:
+    root: WARN
+    br.com.senac.valora: INFO
+    org.hibernate.SQL: WARN
+    org.testcontainers: INFO
+
+management:
+  health:
+    # Mail health indicator tenta conectar em SMTP — sem servidor de mail no
+    # ambiente de teste o health vira DOWN, fazendo /actuator/health responder 503.
+    # Desabilita o indicador apenas em test profile (Story 1.4).
+    mail:
+      enabled: false

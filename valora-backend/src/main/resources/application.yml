@@ -1,0 +1,90 @@
+spring:
+  application:
+    name: valora-backend
+  profiles:
+    default: local                          # ativa application-local.yml por padrão se SPRING_PROFILES_ACTIVE não setado
+  datasource:
+    url: "${DATABASE_URL:?DATABASE_URL é obrigatório — formato JDBC: jdbc:postgresql://host:port/db}"
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate                    # Flyway gerencia schema; Hibernate só valida
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+    open-in-view: false                     # anti-pattern Spring; desabilitar
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    clean-disabled: true                    # protege contra flyway:clean acidental em qualquer ambiente
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false      # ISO 8601 strings, não epoch
+  mvc:
+    # Story 1.4: faz Spring lançar NoHandlerFoundException quando path não casa
+    # com nenhum controller — capturado pelo GlobalExceptionHandler para virar
+    # ErrorResponse JSON consistente em vez de HTML do BasicErrorController.
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      # Story 1.4: necessário em conjunto com throw-exception-if-no-handler-found.
+      # Sem isso, o ResourceHttpRequestHandler captura 404 antes do MVC e a
+      # exception nunca lança. Não há /static servido pela API VALORA.
+      add-mappings: false
+
+valora:
+  jwt:
+    secret: "${JWT_SECRET:?JWT_SECRET é obrigatório — mín. 256 bits, gerar com openssl rand -base64 64}"
+    expirationMinutes: ${JWT_EXPIRATION_MINUTES:240}
+    cookie:
+      # Default true por segurança — homol/prod usam HTTPS (RNF-0010).
+      # Profile local sobrescreve para false no application-local.yml.
+      secure: ${JWT_COOKIE_SECURE:true}
+  cors:
+    # CSV de origens permitidas. Wildcard '*' é incompatível com allowCredentials=true
+    # (per CORS spec) — listar origens explicitamente. Default cobre o Vite local.
+    allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+server:
+  port: ${SERVER_PORT:8080}                 # default 8080; override via env (ex.: conflito com outro serviço local)
+  error:
+    # Story 1.4: GlobalExceptionHandler é a fonte da verdade sobre o que vai
+    # pra resposta de erro. Spring default error handling fica desligado para
+    # evitar dupla via.
+    include-stacktrace: never               # RNF-0009 — nunca expor stack trace
+    include-message: never                  # GlobalExceptionHandler controla
+    include-binding-errors: never           # GlobalExceptionHandler controla via details[]
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info                # actuator mínimo; SecurityConfig restringe /info a ADMINISTRATOR
+  endpoint:
+    health:
+      # Combinado com SecurityConfig: anônimo recebe {status} simplificado;
+      # ADMINISTRATOR recebe details completos (regra explícita /actuator/**).
+      show-details: when-authorized
+      # P6 do code review 2026-05-03: SEM esta linha, when-authorized exibe
+      # details para QUALQUER user autenticado (vaza componentes do health
+      # — versão DB, status SMTP, connection pool — pra Coordinator/Student).
+      # Restringir explicitamente a ADMINISTRATOR mantém a separação prometida no AC7.
+      roles: ADMINISTRATOR
+
+logging:
+  # Story 1.4: a configuração efetiva de appenders/encoders fica em
+  # logback-spring.xml (profile-based: local=texto, demais=JSON via
+  # logstash-logback-encoder). Mantemos aqui apenas níveis de logger.
+  level:
+    root: INFO
+    br.com.senac.valora: DEBUG              # em local; em homol/prod sobrescrito por env var
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
