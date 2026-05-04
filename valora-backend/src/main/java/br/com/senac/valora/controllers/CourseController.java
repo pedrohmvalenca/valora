@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1/courses")
-@PreAuthorize("hasRole('ADMINISTRATOR')")
+@PreAuthorize("hasAnyRole('COORDINATOR','ADMINISTRATOR')")
 public class CourseController {
 
     private final CourseRepository repo;
