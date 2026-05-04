@@ -8,12 +8,6 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-/**
- * Repository da entidade {@link User}.
- *
- * <p>Usado no fluxo de autenticação (Story 1.3) para buscar o usuário por
- * email e validar a senha contra o {@code passwordHash} BCrypt.
- */
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 

@@ -9,20 +9,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Configuração CORS para permitir o frontend Vite ({@code http://localhost:5173})
- * fazer chamadas com cookies (credentials).
- *
- * <p>Pontos críticos:
- * <ul>
- *   <li>{@code setAllowCredentials(true)} é obrigatório para que o browser
- *       envie/receba o cookie httpOnly. Por consequência, o spec CORS proíbe
- *       wildcard {@code *} em {@code allowedOrigins} — origens devem ser
- *       listadas explicitamente.</li>
- *   <li>Origens vêm de {@code valora.cors.allowedOrigins} (CSV); default
- *       {@code http://localhost:5173} para dev local.</li>
- * </ul>
- */
 @Configuration
 public class CorsConfig {
 
@@ -43,10 +29,6 @@ public class CorsConfig {
         return source;
     }
 
-    /**
-     * Suporta múltiplas origens via vírgula. Cada entrada tem trim aplicado
-     * para tolerar espaçamento na variável de ambiente.
-     */
     private List<String> parseOrigins(String csv) {
         return Arrays.stream(csv.split(","))
                 .map(String::trim)

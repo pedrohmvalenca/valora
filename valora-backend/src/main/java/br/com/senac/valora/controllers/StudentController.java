@@ -25,12 +25,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Story Epic 3 (γ) — CRUD de alunos (Coord vê só vinculados, Admin vê tudo).
- *
- * Aluno NÃO loga nesta sessão — só dados administrativos. Story 5.1 (futura)
- * adiciona User profile=STUDENT pra aluno se autenticar.
- */
 @RestController
 @RequestMapping("/api/v1/students")
 @PreAuthorize("hasAnyRole('COORDINATOR','ADMINISTRATOR')")

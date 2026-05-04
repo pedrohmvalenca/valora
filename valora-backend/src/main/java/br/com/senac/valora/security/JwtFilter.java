@@ -17,19 +17,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Filter que lê o cookie {@code AUTH_TOKEN} (httpOnly), valida o JWT e popula
- * o {@code SecurityContext} com {@link JwtAuthentication}.
- *
- * <p>Diferenças intencionais em relação ao {@code cldavi/valoraapi}:
- * <ul>
- *   <li>Lê do cookie httpOnly, <b>não</b> do header {@code Authorization}
- *       (defesa contra XSS — token nunca acessível via JS).</li>
- *   <li>Falha silenciosa: token ausente/inválido apenas <b>não autentica</b>
- *       e continua o chain. O {@code SecurityFilterChain} responde 401.
- *       <b>Nunca</b> dispara HTTP 500 — anti-pattern do colega corrigido.</li>
- * </ul>
- */
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -54,8 +41,6 @@ public class JwtFilter extends OncePerRequestFilter {
             jwtService.validateToken(tokenOpt.get()).ifPresent(jwt -> populateContext(jwt));
         }
 
-        // Independentemente de autenticar ou não, prossegue o chain.
-        // Se SecurityContext continuar vazio, SecurityFilterChain devolve 401.
         chain.doFilter(request, response);
     }
 
@@ -79,8 +64,6 @@ public class JwtFilter extends OncePerRequestFilter {
             JwtAuthentication auth = new JwtAuthentication(userId, profile);
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (IllegalArgumentException | NullPointerException ex) {
-            // Token assinado, mas com claim corrompida — segue como não autenticado.
-            // Não logar o token; só o tipo da falha em DEBUG.
             log.debug("JWT com claim inválida: {}", ex.getClass().getSimpleName());
         }
     }

@@ -9,7 +9,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface StudentRepository extends JpaRepository<Student, UUID> {
 
-    /** Tier D γ — alunos vinculados a qualquer um dos cursos do escopo (Coord). */
     @Query(value = "SELECT DISTINCT s.* FROM students s "
             + "JOIN student_course sc ON sc.student_id = s.id "
             + "WHERE sc.course_id IN (:courseIds) "

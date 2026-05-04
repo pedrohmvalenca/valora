@@ -13,12 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Story 1.8 — consulta da trilha de auditoria. Admin only.
- *
- * <p>Filtros opcionais via query params. Sem retornar {@code payloadJson}
- * (privacidade — pode conter dados sensíveis em versões futuras).
- */
 @RestController
 @RequestMapping("/api/v1/logs")
 @PreAuthorize("hasRole('ADMINISTRATOR')")

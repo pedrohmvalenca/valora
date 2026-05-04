@@ -24,13 +24,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Story Epic 2 (γ) — CRUD de coordenadores. Coord = User profile=COORDINATOR
- * + entries em coordinator_course. Admin only.
- *
- * Senha padrão "Coord@123" (mesma do seed) — Story 1.6.1 alterar-senha permite
- * trocar (cortado nesta sessão γ).
- */
 @RestController
 @RequestMapping("/api/v1/coordinators")
 @PreAuthorize("hasRole('ADMINISTRATOR')")

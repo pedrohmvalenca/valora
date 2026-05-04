@@ -14,16 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Trilha de auditoria — RF-0032 + RF-0033 + EXT-06.
- *
- * <p>Mapeia tabela {@code audit_log} criada na V1. Story 1.8 implementa
- * {@code AuditAspect} (AOP) que persiste registros quando métodos anotados
- * com {@code @Auditable} são executados com sucesso.
- *
- * <p>{@code payloadJson} fica null nesta story; futuras versões podem armazenar
- * delta antes/depois (com filtro de campos sensíveis).
- */
 @Entity
 @Table(name = "audit_log")
 @Getter
@@ -51,10 +41,6 @@ public class AuditLog {
 
     @Column(name = "course_id")
     private UUID courseId;
-
-    // payload_json (JSONB no banco) NÃO é mapeado nesta story — sempre NULL.
-    // Story 1.8.x futura adicionará com @JdbcTypeCode(SqlTypes.JSON) ou
-    // conversor explícito quando delta antes/depois for necessário.
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;

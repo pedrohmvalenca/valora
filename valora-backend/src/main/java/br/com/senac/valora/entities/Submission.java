@@ -14,14 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Submissão de Atividade Complementar (RF-0023..RF-0028 + RN-0004 + RN-0006 +
- * RN-0009). Story 4.5 (consolidada γ) — schema V3.
- *
- * <p>Relacionamentos modelados como UUIDs simples (não @ManyToOne) para evitar
- * lazy-loading + N+1 na lista; nomes de student/course/category são resolvidos
- * via JOIN ou queries dedicadas no service.
- */
 @Entity
 @Table(name = "submissions")
 @Getter
@@ -49,11 +41,6 @@ public class Submission {
     @Column(name = "requested_hours", nullable = false)
     private int requestedHours;
 
-    /**
-     * Horas efetivamente reconhecidas na aprovação (aprovação parcial — RN-0004).
-     * NULL enquanto status=PENDING/REJECTED; obrigatório quando APPROVED.
-     * Story 4.5 nível C (Tier A γ).
-     */
     @Column(name = "recognized_hours")
     private Integer recognizedHours;
 

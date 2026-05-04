@@ -21,12 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Story 4.5 (consolidada γ) — endpoints de submissões.
- *
- * <p>RBAC: Coord/Admin only (Student nunca chega aqui na E1).
- * Filtro automático por cursos vinculados acontece no service (RN-0001).
- */
 @RestController
 @RequestMapping("/api/v1/submissions")
 @PreAuthorize("hasAnyRole('COORDINATOR','ADMINISTRATOR')")
@@ -61,10 +55,6 @@ public class SubmissionController {
         return ResponseEntity.ok().build();
     }
 
-    /**
-     * Reverte decisão (APPROVED/REJECTED) → volta para PENDING. Admin only.
-     * Modo demo — viola RN-0009 em produção (Coord recebe 403 via @PreAuthorize).
-     */
     @PostMapping("/{id}/revert")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public ResponseEntity<Void> revert(@PathVariable UUID id, JwtAuthentication auth) {

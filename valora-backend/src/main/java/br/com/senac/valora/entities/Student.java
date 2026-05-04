@@ -12,11 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Aluno (RF-0015 + EXT-01). Story 4.5 (consolidada γ) — schema V2.
- * Vínculo N:N com Course via tabela {@code student_course} (não modelada como
- * entity nesta story; acessada via SubmissionRepository quando necessário).
- */
 @Entity
 @Table(name = "students")
 @Getter

@@ -13,17 +13,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
-/**
- * Handler de acesso negado — invocado pelo Spring Security quando a request
- * chega autenticada mas o usuário não tem authority/role para o endpoint
- * (ex.: {@code requestMatchers("/actuator/info").hasRole("ADMINISTRATOR")} e
- * o cookie é de COORDINATOR).
- *
- * <p>Coexiste com {@code GlobalExceptionHandler.handleAccessDenied}: este
- * handler cobre o caminho do filter chain (regras do {@code SecurityConfig}),
- * o {@code @ExceptionHandler(AccessDeniedException.class)} cobre quando a
- * exceção vem de dentro de Service/Controller. Mesmo shape de resposta.
- */
 @Component
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 

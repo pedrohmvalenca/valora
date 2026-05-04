@@ -7,10 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-/**
- * Story 1.8 — consulta de logs por filtros básicos.
- * Spring Data deriva implementação dos method names.
- */
 public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
 
     Page<AuditLog> findAllByOrderByCreatedAtDesc(Pageable pageable);

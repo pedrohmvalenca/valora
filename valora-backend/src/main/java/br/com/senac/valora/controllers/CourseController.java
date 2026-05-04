@@ -18,10 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Story Epic 2 — CRUD básico de cursos (Admin only). Tier B do batch γ.
- * Apenas LIST + CREATE nesta versão; edit/delete ficam para sprint futuro.
- */
 @RestController
 @RequestMapping("/api/v1/courses")
 @PreAuthorize("hasAnyRole('COORDINATOR','ADMINISTRATOR')")

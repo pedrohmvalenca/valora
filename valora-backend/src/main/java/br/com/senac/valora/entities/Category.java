@@ -14,10 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Categoria de AC (RF-0019 + RF-0020). Story 4.5 (consolidada γ) — schema V2.
- * Limite por curso fica em {@link CategoryCourse}.
- */
 @Entity
 @Table(name = "categories")
 @Getter

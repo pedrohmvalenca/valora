@@ -15,12 +15,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Limite de horas por (categoria × curso) — RF-0020.
- *
- * <p>Story 4.5 (consolidada γ). PK composta via {@link CategoryCourse.PK}.
- * Carrega o atributo {@code maxHours} usado no cálculo de saldo (RN-0004).
- */
 @Entity
 @Table(name = "category_course")
 @IdClass(CategoryCourse.PK.class)
@@ -45,7 +39,6 @@ public class CategoryCourse {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    /** Composite PK — necessária para {@code @IdClass}. */
     @NoArgsConstructor
     @AllArgsConstructor
     @EqualsAndHashCode

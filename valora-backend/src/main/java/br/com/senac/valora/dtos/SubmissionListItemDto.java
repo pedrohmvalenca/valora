@@ -4,7 +4,6 @@ import br.com.senac.valora.entities.SubmissionStatus;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Linha da listagem de submissões. Story 4.5 (consolidada γ). */
 public record SubmissionListItemDto(
         UUID id,
         String studentName,

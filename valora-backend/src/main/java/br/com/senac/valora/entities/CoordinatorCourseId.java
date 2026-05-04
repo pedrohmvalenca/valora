@@ -10,13 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * PK composta da junction {@link CoordinatorCourse} (Coordinator N:N Course).
- *
- * <p>Mapeia colunas {@code coordinator_id} + {@code course_id} da tabela
- * {@code coordinator_course}. Implementa {@link Serializable} e
- * {@code equals/hashCode} (via Lombok) por contrato JPA para chaves embutidas.
- */
 @Embeddable
 @Getter
 @Setter

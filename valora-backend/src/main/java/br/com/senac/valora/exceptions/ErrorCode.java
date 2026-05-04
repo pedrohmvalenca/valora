@@ -1,31 +1,5 @@
 package br.com.senac.valora.exceptions;
 
-/**
- * Códigos de erro do VALORA.
- *
- * <p>Estes códigos são consumidos NESTA story (1.4) — usados pelo
- * {@link GlobalExceptionHandler}, {@code JwtAuthenticationEntryPoint} e
- * {@code JwtAccessDeniedHandler}:
- * <ul>
- *   <li>{@code AUTH_*} — autenticação e autorização</li>
- *   <li>{@code VAL_*} — validação de payload</li>
- *   <li>{@code RES_*} — recurso não encontrado</li>
- *   <li>{@code DB_*}  — integridade de dados</li>
- *   <li>{@code SYS_*} — erro de sistema</li>
- * </ul>
- *
- * <p>Os entries {@code BIZ_*} são <b>slots reservados</b> para regras de
- * negócio — declarados mas não consumidos nesta story. Cada um já cita a
- * story-alvo que vai consumir; YAGNI manda não criar até a story chegar:
- * <ul>
- *   <li>{@link #HARD_DELETE_BLOCKED} — RN-0008 (Stories 2.3 / 3.4 / 3.8)</li>
- *   <li>{@link #REJECTION_REASON_TOO_SHORT} — RN-0006 (Story 4.6)</li>
- *   <li>{@link #PROOF_REQUIRED} — RN-0005 (Story 4.x)</li>
- *   <li>{@link #CATEGORY_HOURS_LIMIT_EXCEEDED} — RN-0004 (Story 4.5)</li>
- *   <li>{@link #DUPLICATE_PENDING_SUBMISSION} — RN-0010 (Story 4.x)</li>
- *   <li>{@link #COORDINATOR_NOT_LINKED_TO_COURSE} — RN-0001 (Stories 4.x)</li>
- * </ul>
- */
 public enum ErrorCode {
 
     // Auth (AUTH_*)

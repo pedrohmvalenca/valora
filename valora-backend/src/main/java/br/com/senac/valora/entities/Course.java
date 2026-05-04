@@ -12,17 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Curso (RF-0006). Mapeia tabela {@code courses} criada em V1.
- *
- * <p>Story 4.5 (consolidada γ) materializa esta entity (até então, só
- * {@link CoordinatorCourse} referenciava {@code courses} via FK; agora
- * Submissões + Categories também precisam consultar Course completo).
- *
- * <p>Vínculos N:N são mantidos em junctions separadas (CoordinatorCourse,
- * StudentCourse, CategoryCourse) — não modelados aqui via @OneToMany para
- * evitar lazy loading + N+1.
- */
 @Entity
 @Table(name = "courses")
 @Getter

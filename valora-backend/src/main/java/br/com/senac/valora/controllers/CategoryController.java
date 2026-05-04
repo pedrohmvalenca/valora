@@ -24,10 +24,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * Story Epic 3 (γ) — CRUD de categorias com limite por curso (RF-0019 + RF-0020).
- * Coord+Admin.
- */
 @RestController
 @RequestMapping("/api/v1/categories")
 @PreAuthorize("hasAnyRole('COORDINATOR','ADMINISTRATOR')")

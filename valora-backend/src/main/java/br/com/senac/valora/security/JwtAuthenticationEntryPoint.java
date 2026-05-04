@@ -13,19 +13,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
-/**
- * Entry point de autenticação — invocado pelo Spring Security quando a request
- * chega não autenticada em endpoint protegido (token ausente, inválido, expirado).
- *
- * <p>Sem este bean, Spring devolveria 401 com body padrão (vazio ou texto Spring),
- * quebrando o contrato JSON consumido pelo Axios interceptor do frontend.
- * O {@link br.com.senac.valora.exceptions.GlobalExceptionHandler} cobre apenas
- * exceções emergidas <b>dentro</b> de Service/Controller — o filter chain
- * precisa do entry point dedicado.
- *
- * <p>Shape de resposta idêntico ao do {@code GlobalExceptionHandler} — fonte
- * única é o {@link ErrorResponse}.
- */
 @Component
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 

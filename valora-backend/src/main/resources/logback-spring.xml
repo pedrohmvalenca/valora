@@ -1,25 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Configuração de logging do VALORA — RNF-0009 + project-context §4.6.
-
-  Comportamento por profile:
-    - local : layout texto humano (legível em terminal de dev)
-    - !local: layout JSON estruturado via LogstashEncoder
-              (homol/prod/test — facilita parsing por Datadog/CloudWatch/etc.)
-
-  MDC keys reservados (slots vazios nesta story; populados em stories futuras):
-    - userId  : ID do usuário autenticado — populado pela Story 1.8 (AuditAspect)
-    - traceId : ID de correlação de request — slot reservado para
-                observabilidade futura (não há story atual prevista)
--->
 <configuration>
 
-    <!-- Imports do Spring Boot para integrar com profiles e propriedades -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <!-- ========================================================== -->
-    <!-- Profile: local — layout texto humano (DX em terminal)      -->
-    <!-- ========================================================== -->
     <springProfile name="local">
         <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
             <encoder>
@@ -34,9 +17,6 @@
         <logger name="br.com.senac.valora" level="DEBUG"/>
     </springProfile>
 
-    <!-- ========================================================== -->
-    <!-- Demais profiles (homol/prod/test) — JSON estruturado        -->
-    <!-- ========================================================== -->
     <springProfile name="!local">
         <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
