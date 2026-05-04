@@ -42,7 +42,7 @@ valora/
 ### 2. Clonar o repositório
 
 ```bash
-git clone https://github.com/<usuário-ou-org>/valora.git
+git clone https://github.com/pedrohmvalenca/valora.git
 cd valora
 ```
 
