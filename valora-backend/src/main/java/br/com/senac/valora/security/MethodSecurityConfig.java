@@ -13,8 +13,6 @@ public class MethodSecurityConfig {
 
     @Bean
     public RoleHierarchy roleHierarchy() {
-        // RoleHierarchyImpl.fromHierarchy(...) é o factory recomendado em
-        // Spring Security 6.3+ (substitui setHierarchy deprecated).
         return RoleHierarchyImpl.fromHierarchy("""
                 ROLE_ADMINISTRATOR > ROLE_COORDINATOR
                 ROLE_COORDINATOR > ROLE_STUDENT

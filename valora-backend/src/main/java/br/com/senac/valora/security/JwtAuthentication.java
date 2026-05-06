@@ -17,7 +17,7 @@ public class JwtAuthentication extends AbstractAuthenticationToken {
         super(buildAuthorities(profile));
         this.userId = userId;
         this.profile = profile;
-        setAuthenticated(true); // o JwtFilter só constrói este objeto após verify() bem-sucedido
+        setAuthenticated(true); 
     }
 
     private static Collection<GrantedAuthority> buildAuthorities(UserProfile profile) {

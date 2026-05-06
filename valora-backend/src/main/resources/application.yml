@@ -2,27 +2,28 @@ spring:
   application:
     name: valora-backend
   profiles:
-    default: local                          # ativa application-local.yml por padrão se SPRING_PROFILES_ACTIVE não setado
+    default: local                          
   datasource:
-    url: "${DATABASE_URL:?DATABASE_URL é obrigatório — formato JDBC: jdbc:postgresql://host:port/db}"
-    driver-class-name: org.postgresql.Driver
+    url: ${URL_DB} 
+    username: ${USERNAME_DB} 
+    password: ${PASSWORD_DB} 
   jpa:
     hibernate:
-      ddl-auto: validate                    # Flyway gerencia schema; Hibernate só valida
+      ddl-auto: validate                    
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           time_zone: UTC
-    open-in-view: false                     # anti-pattern Spring; desabilitar
+    open-in-view: false                     
   flyway:
     enabled: true
     locations: classpath:db/migration
-    baseline-on-migrate: false
-    clean-disabled: true                    # protege contra flyway:clean acidental em qualquer ambiente
+    baseline-on-migrate: true
+    clean-disabled: true                   
   jackson:
     serialization:
-      write-dates-as-timestamps: false      # ISO 8601 strings, não epoch
+      write-dates-as-timestamps: false     
   mvc:
     throw-exception-if-no-handler-found: true
   web:
@@ -39,17 +40,17 @@ valora:
     allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 server:
-  port: ${SERVER_PORT:8080}                 # default 8080; override via env (ex.: conflito com outro serviço local)
+  port: ${SERVER_PORT:8080}                 
   error:
-    include-stacktrace: never               # RNF-0009 — nunca expor stack trace
-    include-message: never                  # GlobalExceptionHandler controla
-    include-binding-errors: never           # GlobalExceptionHandler controla via details[]
+    include-stacktrace: never               
+    include-message: never                  
+    include-binding-errors: never           
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info                # actuator mínimo; SecurityConfig restringe /info a ADMINISTRATOR
+        include: health,info                
   endpoint:
     health:
       show-details: when-authorized
@@ -58,7 +59,7 @@ management:
 logging:
   level:
     root: INFO
-    br.com.senac.valora: DEBUG              # em local; em homol/prod sobrescrito por env var
+    br.com.senac.valora: DEBUG              
 
 springdoc:
   api-docs:

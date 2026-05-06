@@ -11,9 +11,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    /** Busca usuário por email — chave de login. */
     Optional<User> findByEmail(String email);
 
-    /** Lista usuários por profile (Tier C γ — listar coordenadores). */
     List<User> findByProfileOrderByNameAsc(UserProfile profile);
 }

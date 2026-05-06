@@ -29,7 +29,6 @@ public class AuditService {
 
     @Async("auditExecutor")
     public void recordLogout(UUID userId) {
-        // userId pode ser null (logout idempotente sem cookie) — log audit anônimo
         if (userId == null) {
             log.debug("Logout sem userId conhecido (cookie ausente/expirado) — audit pulado");
             return;
@@ -61,7 +60,6 @@ public class AuditService {
                     .build();
             repo.save(entry);
         } catch (Exception ex) {
-            // Audit nunca derruba o request — apenas loga
             log.warn("Falha ao persistir audit log (action={}, userId={}): {}", action, userId, ex.getMessage());
         }
     }

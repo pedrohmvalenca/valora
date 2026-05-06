@@ -35,13 +35,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Story 4.5 (consolidada γ) — listagem, detalhe, aprovação (com check de saldo
- * nível B — RN-0004 + EXT-02), reprovação (motivo ≥20 chars — RN-0006).
- *
- * <p>RBAC (RN-0001): Coordenador só vê/decide submissões de cursos vinculados.
- * Admin vê tudo.
- */
 @Service
 public class SubmissionService {
 
@@ -75,9 +68,6 @@ public class SubmissionService {
         this.auditService = auditService;
     }
 
-    // ============================================================
-    // Listagem (RN-0001 — escopo automático Coord)
-    // ============================================================
 
     @Transactional(readOnly = true)
     public Page<SubmissionListItemDto> list(
@@ -92,7 +82,6 @@ public class SubmissionService {
 
         boolean isAdmin = auth.profile() == UserProfile.ADMINISTRATOR;
         if (isAdmin) {
-            // Admin: sem filtro automático; courseId opcional do query param
             if (courseId != null && status != null) {
                 return submissionRepo.findByCourseIdAndStatusOrderByCreatedAtDesc(courseId, status, pageable);
             }
@@ -105,12 +94,10 @@ public class SubmissionService {
             return submissionRepo.findAllByOrderByCreatedAtDesc(pageable);
         }
 
-        // Coord: filtra automaticamente por cursos vinculados (RN-0001)
         List<UUID> linkedCourses = coordCourseRepo.findCourseIdsByCoordinatorId(auth.userId());
         if (linkedCourses.isEmpty()) {
             return Page.empty(pageable);
         }
-        // Se courseId foi passado e não está nos linkedCourses, retorna vazio (sem 403)
         if (courseId != null && !linkedCourses.contains(courseId)) {
             return Page.empty(pageable);
         }
@@ -121,9 +108,6 @@ public class SubmissionService {
         return submissionRepo.findByCourseIdInOrderByCreatedAtDesc(effectiveCourses, pageable);
     }
 
-    // ============================================================
-    // Detalhe (com balance)
-    // ============================================================
 
     @Transactional(readOnly = true)
     public SubmissionDetailDto getDetail(UUID submissionId, JwtAuthentication auth) {
@@ -171,16 +155,10 @@ public class SubmissionService {
         return new BalanceDto(max, accumulated, remaining);
     }
 
-    // ============================================================
-    // Aprovar (check de saldo — nível B)
-    // ============================================================
-
     @Transactional
     public void approve(UUID submissionId, ApproveSubmissionRequest req, JwtAuthentication auth) {
         Submission s = loadAndValidatePending(submissionId, auth);
 
-        // Aprovação parcial (nível C — Tier A γ): se vier recognizedHours no body,
-        // valida ≤ requested. Se ausente, default = requested (caminho normal).
         int recognized = (req != null && req.recognizedHours() != null)
                 ? req.recognizedHours() : s.getRequestedHours();
 
@@ -211,18 +189,6 @@ public class SubmissionService {
         auditService.recordSubmissionDecision("APPROVE_SUBMISSION", auth.userId(), submissionId, s.getCourseId());
     }
 
-    // ============================================================
-    // Reprovar (motivo ≥20 chars — Bean Validation no DTO)
-    // ============================================================
-
-    /**
-     * Reverte decisão (APPROVED/REJECTED) → volta para PENDING. Admin only.
-     *
-     * <p><b>Modo demo</b> — viola RN-0009 (status imutável após decisão). Útil
-     * para resetar fila de pendências em sessões de demonstração sem precisar
-     * recriar dados. Não deve ser usado em produção; em prod o caminho correto
-     * é "anular submissão" criando uma nova com referência à anterior.
-     */
     @Transactional
     public void revertDecision(UUID submissionId, JwtAuthentication auth) {
         // Profile check removido — @PreAuthorize no controller já garante Admin.
@@ -260,9 +226,6 @@ public class SubmissionService {
         auditService.recordSubmissionDecision("REJECT_SUBMISSION", auth.userId(), submissionId, s.getCourseId());
     }
 
-    // ============================================================
-    // Helpers
-    // ============================================================
 
     private Submission loadAndValidatePending(UUID submissionId, JwtAuthentication auth) {
         Submission s = submissionRepo.findById(submissionId)
@@ -286,12 +249,10 @@ public class SubmissionService {
         if (auth.profile() == UserProfile.COORDINATOR) {
             List<UUID> linked = coordCourseRepo.findCourseIdsByCoordinatorId(auth.userId());
             if (!linked.contains(s.getCourseId())) {
-                // Trata como NOT_FOUND para não vazar a existência da submissão (RN-0001)
                 throw new EntityNotFoundException("Submissão não encontrada: id=" + s.getId());
             }
             return;
         }
-        // Student não acessa /submissions (filter cobre, mas defesa em profundidade)
         throw new EntityNotFoundException("Submissão não encontrada: id=" + s.getId());
     }
 

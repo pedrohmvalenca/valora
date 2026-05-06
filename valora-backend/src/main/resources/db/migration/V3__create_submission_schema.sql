@@ -1,9 +1,3 @@
--- V3__create_submission_schema.sql
--- Story 4.5 (consolidada γ) — Schema de Submissões
---
--- RN-0004 (limite categoria), RN-0006 (motivo ≥20), RN-0009 (status imutável).
--- Index composto para query SUM de saldo (EXT-02).
-
 CREATE TABLE submissions (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     student_id          UUID NOT NULL,
@@ -33,10 +27,8 @@ CREATE TABLE submissions (
     )
 );
 
--- Index composto para query SUM(requested_hours) por (aluno × curso × categoria × status=APPROVED) — EXT-02
 CREATE INDEX idx_submissions_balance
     ON submissions(student_id, course_id, category_id, status);
 
--- Index para listagem por escopo Coord (cursos vinculados) ordenada por data
 CREATE INDEX idx_submissions_course_created
     ON submissions(course_id, created_at DESC);
