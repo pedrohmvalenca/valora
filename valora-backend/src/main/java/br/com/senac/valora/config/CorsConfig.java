@@ -21,7 +21,7 @@ public class CorsConfig {
         cors.setAllowCredentials(true);
         cors.setAllowedOrigins(parseOrigins(allowedOriginsCsv));
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        cors.setAllowedHeaders(List.of("Content-Type", "Accept", "X-Requested-With"));
+        cors.setAllowedHeaders(List.of("*"));
         cors.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
