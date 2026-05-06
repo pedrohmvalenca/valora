@@ -50,18 +50,21 @@ public class AuthController {
     private final UserMapper userMapper;
     private final AuditService auditService;
     private final boolean cookieSecure;
+    private final String cookieSameSite;
 
     public AuthController(
             AuthService authService,
             JwtService jwtService,
             UserMapper userMapper,
             AuditService auditService,
-            @Value("${valora.jwt.cookie.secure}") boolean cookieSecure) {
+            @Value("${valora.jwt.cookie.secure}") boolean cookieSecure,
+            @Value("${valora.jwt.cookie.sameSite}") String cookieSameSite) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.userMapper = userMapper;
         this.auditService = auditService;
         this.cookieSecure = cookieSecure;
+        this.cookieSameSite = cookieSameSite;
     }
 
     @PostMapping("/login")
@@ -75,7 +78,7 @@ public class AuthController {
         ResponseCookie cookie = ResponseCookie.from(COOKIE_NAME, result.token())
                 .httpOnly(true)
                 .secure(cookieSecure)
-                .sameSite("Strict")
+                .sameSite(cookieSameSite)
                 .path("/")
                 .maxAge(jwtService.getExpirationSeconds())
                 .build();
@@ -108,7 +111,7 @@ public class AuthController {
         ResponseCookie clearCookie = ResponseCookie.from(COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(cookieSecure)
-                .sameSite("Strict")
+                .sameSite(cookieSameSite)
                 .path("/")
                 .maxAge(0)
                 .build();

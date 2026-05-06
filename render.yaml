@@ -1,0 +1,80 @@
+# =============================================================================
+# VALORA — Blueprint Render (IaC)
+#
+# Provisiona:
+#   1. valora-backend  → web service Docker (Spring Boot 3.5 + Java 21)
+#   2. valora-db       → PostgreSQL gerenciado (free tier — 1 GB, expira em 90 dias)
+#
+# Como usar:
+#   1. Push deste arquivo + Dockerfile para a branch main no GitHub
+#   2. Em https://dashboard.render.com → "New" → "Blueprint" → conecta o repo
+#   3. Render lê este arquivo e cria os 2 recursos automaticamente
+#   4. Após primeiro deploy, em valora-backend > Environment, atualizar:
+#        - CORS_ALLOWED_ORIGINS  → URL do frontend Vercel (ex.: https://valora.vercel.app)
+#      (sem isso, frontend Vercel vê erro CORS no /login)
+#
+# Plano free pega bem para apresentação de banca, mas:
+#   - Web service hiberna após 15min sem requisição (~30s pra acordar primeira req)
+#   - Postgres free expira em 90 dias — dump + reseed antes disso
+#
+# Doc oficial do schema: https://render.com/docs/blueprint-spec
+# =============================================================================
+
+databases:
+  - name: valora-db
+    plan: free
+    databaseName: valora
+    user: valora
+    region: oregon                          # mesma região do web service (latência interna)
+    postgresMajorVersion: "16"              # Postgres 16 disponível na free tier; backend declara 15+ no CLAUDE.md, compatível
+
+services:
+  - type: web
+    name: valora-backend
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: valora-backend                 # Dockerfile + código moram aqui
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health       # 200 quando UP — Render usa pra detectar deploy ok
+    autoDeploy: true                        # push em main → redeploy automático
+    envVars:
+      # ---- Postgres (vinculado ao banco acima) ----
+      # Render gera DATABASE_URL no formato postgres:// — entrypoint.sh do
+      # container converte pra jdbc:postgresql:// antes do Spring iniciar.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: valora-db
+          property: connectionString
+
+      # ---- JWT ----
+      # JWT_SECRET gerado pelo Render no primeiro deploy (32 bytes aleatórios,
+      # 256 bits — atende RNF-0010). Não rotacionar via blueprint (gera valor
+      # novo e invalida sessões existentes); rotacionar manual no dashboard.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION_MINUTES
+        value: "240"
+      - key: JWT_COOKIE_SECURE
+        value: "true"                       # HTTPS obrigatório (Render serve https por default)
+      - key: JWT_COOKIE_SAMESITE
+        value: "None"                       # cross-site (frontend Vercel ↔ backend Render) exige None+Secure
+
+      # ---- CORS ----
+      # PLACEHOLDER — após criar projeto no Vercel, atualizar com URL real
+      # (ex.: https://valora-frontend.vercel.app). Aceita CSV de origens.
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://valora.vercel.app"
+
+      # ---- Spring profile ----
+      # Sem perfil específico (default lê application.yml já parametrizado por env).
+      # Logging em INFO no root, DEBUG em br.com.senac.valora pode ser ligado por env.
+      - key: SPRING_PROFILES_ACTIVE
+        value: "default"
+
+      # ---- Java tuning ----
+      # Mantém heap conservador para 512MB free tier (Dockerfile já define
+      # MaxRAMPercentage=75 — esta env permite override sem rebuild da imagem).
+      - key: JAVA_OPTS
+        value: "-XX:MaxRAMPercentage=75 -XX:+UseContainerSupport -Djava.security.egd=file:/dev/./urandom"

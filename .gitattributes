@@ -1,0 +1,13 @@
+# Força LF para arquivos consumidos por containers Linux/Render — CRLF na shebang
+# (#!/bin/sh\r) faz o kernel reportar "no such file or directory" no boot do container.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Maven wrapper já vem com LF; manter explícito.
+mvnw        text eol=lf
+
+# Wrapper batch e scripts cmd seguem CRLF (Windows).
+*.cmd       text eol=crlf
+*.bat       text eol=crlf

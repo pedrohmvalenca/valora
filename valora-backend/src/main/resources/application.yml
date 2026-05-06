@@ -43,13 +43,18 @@ valora:
       # Default true por segurança — homol/prod usam HTTPS (RNF-0010).
       # Profile local sobrescreve para false no application-local.yml.
       secure: ${JWT_COOKIE_SECURE:true}
+      # Default Strict — frontend e backend no mesmo site (dev: localhost:5173 ↔ localhost:8080
+      # contam como same-site para o browser). Em deploy cross-site (frontend *.vercel.app +
+      # backend *.onrender.com), setar JWT_COOKIE_SAMESITE=None — caso contrário o cookie httpOnly
+      # não atravessa a fetch cross-site e o login fica preso. None exige Secure=true (HTTPS).
+      sameSite: ${JWT_COOKIE_SAMESITE:Strict}
   cors:
     # CSV de origens permitidas. Wildcard '*' é incompatível com allowCredentials=true
     # (per CORS spec) — listar origens explicitamente. Default cobre o Vite local.
     allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 server:
-  port: ${SERVER_PORT:8080}                 # default 8080; override via env (ex.: conflito com outro serviço local)
+  port: ${PORT:${SERVER_PORT:8080}}         # PORT (Render/Heroku) > SERVER_PORT (local) > 8080
   error:
     # Story 1.4: GlobalExceptionHandler é a fonte da verdade sobre o que vai
     # pra resposta de erro. Spring default error handling fica desligado para

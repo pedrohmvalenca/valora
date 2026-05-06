@@ -1,0 +1,25 @@
+# Build artifacts (Dockerfile rebuilda dentro do container)
+target/
+!target/*.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs e caches locais
+*.log
+*.tmp
+.DS_Store
+
+# Configurações que NÃO devem ir pro container (usar env vars do Render)
+src/main/resources/application-local.yml
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docs (não afetam runtime)
+README.md
+docker-compose.yml
