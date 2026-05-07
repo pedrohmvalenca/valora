@@ -36,6 +36,7 @@ public class CourseController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR','COORDINATOR')")
     public ResponseEntity<List<CourseDto>> list() {
         List<CourseDto> all = repo.findAll().stream()
                 .map(c -> new CourseDto(c.getId(), c.getName(), c.getCode(),
