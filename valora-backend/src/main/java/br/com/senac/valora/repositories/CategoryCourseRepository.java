@@ -12,4 +12,6 @@ public interface CategoryCourseRepository extends JpaRepository<CategoryCourse, 
 
     /** Tier E γ — listar todos os limites de uma categoria (1 por curso). */
     java.util.List<CategoryCourse> findByCategoryId(UUID categoryId);
+
+    java.util.List<CategoryCourse> findByCourseId(UUID courseId);
 }
