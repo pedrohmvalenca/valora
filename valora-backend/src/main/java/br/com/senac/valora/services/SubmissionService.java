@@ -151,6 +151,19 @@ public class SubmissionService {
                 s.getCreatedAt(), balance, history);
     }
 
+    public record ProofContent(byte[] data, String contentType) {}
+
+    @Transactional(readOnly = true)
+    public ProofContent getProof(UUID submissionId, JwtAuthentication auth) {
+        Submission s = submissionRepo.findById(submissionId)
+                .orElseThrow(() -> new EntityNotFoundException("Submissão não encontrada: id=" + submissionId));
+        verifyAccess(s, auth);
+        if (s.getProofData() == null || s.getProofData().length == 0) {
+            throw new EntityNotFoundException("Comprovante não disponível para esta submissão");
+        }
+        return new ProofContent(s.getProofData(), s.getProofContentType());
+    }
+
     private List<HistoryItemDto> buildHistory(Submission current) {
         List<Submission> previous = submissionRepo
                 .findTop10ByStudentIdAndCourseIdAndCategoryIdAndIdNotOrderByCreatedAtDesc(

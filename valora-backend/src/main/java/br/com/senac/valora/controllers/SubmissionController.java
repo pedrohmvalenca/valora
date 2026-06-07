@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,6 +51,15 @@ public class SubmissionController {
     @GetMapping("/{id}")
     public ResponseEntity<SubmissionDetailDto> detail(@PathVariable UUID id, JwtAuthentication auth) {
         return ResponseEntity.ok(service.getDetail(id, auth));
+    }
+
+    @GetMapping("/{id}/proof")
+    public ResponseEntity<byte[]> proof(@PathVariable UUID id, JwtAuthentication auth) {
+        SubmissionService.ProofContent p = service.getProof(id, auth);
+        MediaType mediaType = p.contentType() != null
+                ? MediaType.parseMediaType(p.contentType())
+                : MediaType.APPLICATION_OCTET_STREAM;
+        return ResponseEntity.ok().contentType(mediaType).body(p.data());
     }
 
     @PostMapping("/{id}/approve")
