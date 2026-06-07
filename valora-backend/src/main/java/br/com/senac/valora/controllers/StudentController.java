@@ -4,12 +4,14 @@ import br.com.senac.valora.dtos.CreateStudentRequest;
 import br.com.senac.valora.dtos.StudentDto;
 import br.com.senac.valora.entities.EntityType;
 import br.com.senac.valora.entities.Student;
+import br.com.senac.valora.entities.User;
 import br.com.senac.valora.entities.UserProfile;
 import br.com.senac.valora.exceptions.BusinessRuleException;
 import br.com.senac.valora.exceptions.ErrorCode;
 import br.com.senac.valora.repositories.CoordinatorCourseRepository;
 import br.com.senac.valora.repositories.CourseRepository;
 import br.com.senac.valora.repositories.StudentRepository;
+import br.com.senac.valora.repositories.UserRepository;
 import br.com.senac.valora.security.JwtAuthentication;
 import br.com.senac.valora.services.AuditService;
 import com.fasterxml.uuid.Generators;
@@ -22,14 +24,15 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
  * Story Epic 3 (γ) — CRUD de alunos (Coord vê só vinculados, Admin vê tudo).
  *
- * Aluno NÃO loga nesta sessão — só dados administrativos. Story 5.1 (futura)
- * adiciona User profile=STUDENT pra aluno se autenticar.
+ * Story 5.1: criar um aluno também cria um User(profile=STUDENT) com o mesmo id,
+ * e-mail e senha provisória (BCrypt), habilitando o login do app mobile.
  */
 @RestController
 @RequestMapping("/api/v1/students")
@@ -39,16 +42,21 @@ public class StudentController {
     private final StudentRepository studentRepo;
     private final CourseRepository courseRepo;
     private final CoordinatorCourseRepository ccRepo;
+    private final UserRepository userRepo;
+    private final BCryptPasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
     @PersistenceContext
     private EntityManager em;
 
     public StudentController(StudentRepository studentRepo, CourseRepository courseRepo,
-                             CoordinatorCourseRepository ccRepo, AuditService auditService) {
+                             CoordinatorCourseRepository ccRepo, UserRepository userRepo,
+                             BCryptPasswordEncoder passwordEncoder, AuditService auditService) {
         this.studentRepo = studentRepo;
         this.courseRepo = courseRepo;
         this.ccRepo = ccRepo;
+        this.userRepo = userRepo;
+        this.passwordEncoder = passwordEncoder;
         this.auditService = auditService;
     }
 
@@ -71,7 +79,7 @@ public class StudentController {
                     .map(o -> (UUID) o)
                     .toList();
             return new StudentDto(s.getId(), s.getRegistrationCode(), s.getName(), s.getEmail(),
-                    s.isActive(), courseIds, s.getCreatedAt());
+                    s.isActive(), courseIds, s.getCreatedAt(), null);
         }).toList();
         return ResponseEntity.ok(result);
     }
@@ -96,16 +104,37 @@ public class StudentController {
             }
         }
 
+        String email = req.email().trim().toLowerCase();
+        if (userRepo.findByEmail(email).isPresent()) {
+            throw new BusinessRuleException(ErrorCode.DATA_INTEGRITY_VIOLATION,
+                    "E-mail já está em uso: " + email);
+        }
+
+        boolean generatedPassword = req.password() == null || req.password().isBlank();
+        String rawPassword = generatedPassword ? generateProvisionalPassword() : req.password();
+
         UUID id = Generators.timeBasedEpochGenerator().generate();
+        Instant now = Instant.now();
         Student s = Student.builder()
                 .id(id)
                 .registrationCode(req.registrationCode().trim())
                 .name(req.name().trim())
-                .email(req.email().trim().toLowerCase())
+                .email(email)
                 .isActive(true)
-                .createdAt(Instant.now())
+                .createdAt(now)
                 .build();
         studentRepo.save(s);
+
+        User user = User.builder()
+                .id(id)
+                .email(email)
+                .passwordHash(passwordEncoder.encode(rawPassword))
+                .name(s.getName())
+                .profile(UserProfile.STUDENT)
+                .isActive(true)
+                .createdAt(now)
+                .build();
+        userRepo.save(user);
 
         for (UUID courseId : req.courseIds()) {
             em.createNativeQuery(
@@ -120,6 +149,11 @@ public class StudentController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 new StudentDto(s.getId(), s.getRegistrationCode(), s.getName(), s.getEmail(),
-                        s.isActive(), req.courseIds(), s.getCreatedAt()));
+                        s.isActive(), req.courseIds(), s.getCreatedAt(),
+                        generatedPassword ? rawPassword : null));
+    }
+
+    private static String generateProvisionalPassword() {
+        return UUID.randomUUID().toString().substring(0, 8);
     }
 }

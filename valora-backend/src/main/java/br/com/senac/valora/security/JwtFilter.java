@@ -36,6 +36,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
     private static final String COOKIE_NAME = "AUTH_TOKEN";
     private static final String CLAIM_PROFILE = "profile";
+    private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
 
@@ -49,6 +50,10 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         Optional<String> tokenOpt = extractTokenFromCookie(request);
+
+        if (tokenOpt.isEmpty()) {
+            tokenOpt = extractTokenFromHeader(request);
+        }
 
         if (tokenOpt.isPresent()) {
             jwtService.validateToken(tokenOpt.get()).ifPresent(jwt -> populateContext(jwt));
@@ -68,6 +73,14 @@ public class JwtFilter extends OncePerRequestFilter {
             if (COOKIE_NAME.equals(cookie.getName())) {
                 return Optional.ofNullable(cookie.getValue());
             }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<String> extractTokenFromHeader(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith(BEARER_PREFIX)) {
+            return Optional.of(header.substring(BEARER_PREFIX.length()).trim());
         }
         return Optional.empty();
     }

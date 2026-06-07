@@ -11,5 +11,6 @@ public record CreateStudentRequest(
         @NotBlank @Size(max = 50) String registrationCode,
         @NotBlank @Size(max = 255) String name,
         @NotBlank @Email @Size(max = 255) String email,
-        @NotEmpty(message = "Pelo menos 1 curso vinculado") List<UUID> courseIds
+        @NotEmpty(message = "Pelo menos 1 curso vinculado") List<UUID> courseIds,
+        @Size(min = 6, max = 100) String password
 ) {}

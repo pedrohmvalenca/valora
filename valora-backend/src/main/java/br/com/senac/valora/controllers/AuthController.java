@@ -90,7 +90,7 @@ public class AuthController {
         // Audit (Story 1.8) — assíncrono, não bloqueia resposta
         auditService.recordLogin(result.user().getId());
 
-        return ResponseEntity.ok(new LoginResponse(dto));
+        return ResponseEntity.ok(new LoginResponse(dto, result.token()));
     }
 
     /**

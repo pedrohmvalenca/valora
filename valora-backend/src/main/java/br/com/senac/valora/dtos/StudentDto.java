@@ -11,5 +11,6 @@ public record StudentDto(
         String email,
         boolean isActive,
         List<UUID> linkedCourseIds,
-        Instant createdAt
+        Instant createdAt,
+        String provisionalPassword
 ) {}

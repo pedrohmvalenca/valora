@@ -1,7 +1,9 @@
 package br.com.senac.valora.controllers;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -49,9 +51,10 @@ class AuthControllerIntegrationTest extends TestcontainersBaseTest {
                 .andExpect(jsonPath("$.user.name", is("Administrador VALORA (dev)")))
                 .andExpect(jsonPath("$.user.profile", is("ADMINISTRATOR")))
                 .andExpect(jsonPath("$.user.linkedCourses").isArray())
-                // Body NÃO deve conter token
+                // Dual-mode: token vai no corpo (mobile) além do cookie httpOnly (PWA)
                 .andExpect(jsonPath("$.user.token").doesNotExist())
-                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.token", not(emptyString())))
                 // Set-Cookie com atributos corretos (validar via header text — MockMvc não parseia SameSite)
                 .andExpect(header().string("Set-Cookie", containsString("AUTH_TOKEN=")))
                 .andExpect(header().string("Set-Cookie", containsString("HttpOnly")))
