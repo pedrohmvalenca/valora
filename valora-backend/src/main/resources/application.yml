@@ -38,6 +38,17 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 12MB
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 valora:
   jwt:
@@ -56,6 +67,8 @@ valora:
     # CSV de origens permitidas. Wildcard '*' é incompatível com allowCredentials=true
     # (per CORS spec) — listar origens explicitamente. Default cobre o Vite local.
     allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
 
 server:
   port: ${PORT:${SERVER_PORT:8080}}         # PORT (Render/Heroku) > SERVER_PORT (local) > 8080

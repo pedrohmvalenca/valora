@@ -10,6 +10,7 @@ import br.com.senac.valora.dtos.MySubmissionDto;
 import br.com.senac.valora.entities.Category;
 import br.com.senac.valora.entities.CategoryCourse;
 import br.com.senac.valora.entities.Course;
+import br.com.senac.valora.entities.Student;
 import br.com.senac.valora.entities.Submission;
 import br.com.senac.valora.entities.SubmissionStatus;
 import br.com.senac.valora.entities.UserProfile;
@@ -18,8 +19,10 @@ import br.com.senac.valora.exceptions.ErrorCode;
 import br.com.senac.valora.repositories.CategoryCourseRepository;
 import br.com.senac.valora.repositories.CategoryRepository;
 import br.com.senac.valora.repositories.CourseRepository;
+import br.com.senac.valora.repositories.StudentRepository;
 import br.com.senac.valora.repositories.SubmissionRepository;
 import br.com.senac.valora.security.JwtAuthentication;
+import br.com.senac.valora.services.MailService;
 import com.fasterxml.uuid.Generators;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
@@ -56,16 +59,21 @@ public class MeController {
     private final CategoryRepository categoryRepo;
     private final CategoryCourseRepository categoryCourseRepo;
     private final SubmissionRepository submissionRepo;
+    private final StudentRepository studentRepo;
+    private final MailService mailService;
 
     @PersistenceContext
     private EntityManager em;
 
     public MeController(CourseRepository courseRepo, CategoryRepository categoryRepo,
-                        CategoryCourseRepository categoryCourseRepo, SubmissionRepository submissionRepo) {
+                        CategoryCourseRepository categoryCourseRepo, SubmissionRepository submissionRepo,
+                        StudentRepository studentRepo, MailService mailService) {
         this.courseRepo = courseRepo;
         this.categoryRepo = categoryRepo;
         this.categoryCourseRepo = categoryCourseRepo;
         this.submissionRepo = submissionRepo;
+        this.studentRepo = studentRepo;
+        this.mailService = mailService;
     }
 
     @GetMapping("/courses")
@@ -229,6 +237,13 @@ public class MeController {
                 categoryId, cat != null ? cat.getName() : null, cat != null ? cat.getGroupType() : null,
                 s.getDescription(), s.getRequestedHours(), s.getRecognizedHours(),
                 s.getStatus(), s.getRejectionReason(), s.getCreatedAt());
+
+        Student student = studentRepo.findById(studentId).orElse(null);
+        if (student != null) {
+            mailService.sendSubmissionConfirmation(student.getEmail(), student.getName(),
+                    c != null ? c.getName() : "", cat != null ? cat.getName() : "", s.getRequestedHours());
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
