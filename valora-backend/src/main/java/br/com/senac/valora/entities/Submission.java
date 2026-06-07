@@ -60,6 +60,12 @@ public class Submission {
     @Column(name = "proof_path")
     private String proofPath;
 
+    @Column(name = "proof_data")
+    private byte[] proofData;
+
+    @Column(name = "proof_content_type")
+    private String proofContentType;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SubmissionStatus status;

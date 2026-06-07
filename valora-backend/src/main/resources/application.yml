@@ -34,6 +34,10 @@ spring:
       # Sem isso, o ResourceHttpRequestHandler captura 404 antes do MVC e a
       # exception nunca lança. Não há /static servido pela API VALORA.
       add-mappings: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 valora:
   jwt:

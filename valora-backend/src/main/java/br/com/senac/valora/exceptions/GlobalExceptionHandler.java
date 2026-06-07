@@ -18,6 +18,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 /**
@@ -178,6 +179,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(build("DATA_INTEGRITY_VIOLATION", "Operação viola integridade de dados",
                         ErrorCode.DATA_INTEGRITY_VIOLATION, req, null));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUpload(
+            MaxUploadSizeExceededException ex, HttpServletRequest req) {
+        log.warn("Upload excede o tamanho máximo em {}", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(build("PAYLOAD_TOO_LARGE", "Arquivo excede o tamanho máximo permitido",
+                        ErrorCode.PROOF_REQUIRED, req, null));
     }
 
     /** Regra de domínio violada — Service lança {@link BusinessRuleException}. */
