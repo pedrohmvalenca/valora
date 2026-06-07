@@ -1,10 +1,14 @@
 package br.com.senac.valora.controllers;
 
+import br.com.senac.valora.dtos.BalanceDto;
 import br.com.senac.valora.dtos.CategoryCourseLimitDto;
 import br.com.senac.valora.dtos.CategoryDto;
 import br.com.senac.valora.dtos.CourseDto;
+import br.com.senac.valora.dtos.DashboardCategoryDto;
+import br.com.senac.valora.dtos.DashboardCourseDto;
 import br.com.senac.valora.dtos.MySubmissionDto;
 import br.com.senac.valora.entities.Category;
+import br.com.senac.valora.entities.CategoryCourse;
 import br.com.senac.valora.entities.Course;
 import br.com.senac.valora.entities.Submission;
 import br.com.senac.valora.entities.SubmissionStatus;
@@ -22,6 +26,8 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -123,6 +129,48 @@ public class MeController {
                     s.getStatus(), s.getRejectionReason(), s.getCreatedAt());
         }).toList();
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/dashboard")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<DashboardCourseDto>> myDashboard(JwtAuthentication auth) {
+        UUID studentId = requireStudent(auth);
+        List<DashboardCourseDto> result = courseRepo.findAllById(linkedCourseIds(studentId)).stream()
+                .map(course -> buildCourseDashboard(studentId, course))
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    private DashboardCourseDto buildCourseDashboard(UUID studentId, Course course) {
+        UUID courseId = course.getId();
+        List<CategoryCourse> links = categoryCourseRepo.findByCourseId(courseId);
+        Map<UUID, Category> catMap = categoryRepo
+                .findAllById(links.stream().map(CategoryCourse::getCategoryId).toList())
+                .stream().collect(Collectors.toMap(Category::getId, Function.identity()));
+
+        List<DashboardCategoryDto> categories = new ArrayList<>();
+        int totalRecognized = 0;
+        for (CategoryCourse link : links) {
+            UUID categoryId = link.getCategoryId();
+            Category cat = catMap.get(categoryId);
+            int max = link.getMaxHours();
+            int accumulated = submissionRepo.sumApprovedHours(studentId, courseId, categoryId);
+            int remaining = Math.max(0, max - accumulated);
+            totalRecognized += accumulated;
+            categories.add(new DashboardCategoryDto(categoryId,
+                    cat != null ? cat.getName() : null,
+                    cat != null ? cat.getGroupType() : null,
+                    new BalanceDto(max, accumulated, remaining)));
+        }
+        categories.sort(Comparator.comparing(c -> c.name() == null ? "" : c.name(), String.CASE_INSENSITIVE_ORDER));
+
+        int minHours = course.getMinimumWorkloadHours();
+        int progress = minHours > 0 ? Math.min(100, (int) Math.round(totalRecognized * 100.0 / minHours)) : 0;
+        int pending = (int) submissionRepo.countByStudentIdAndCourseIdAndStatus(
+                studentId, courseId, SubmissionStatus.PENDING);
+
+        return new DashboardCourseDto(courseId, course.getName(), minHours,
+                totalRecognized, progress, pending, categories);
     }
 
     @PostMapping(value = "/submissions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
