@@ -95,6 +95,9 @@ management:
       # — versão DB, status SMTP, connection pool — pra Coordinator/Student).
       # Restringir explicitamente a ADMINISTRATOR mantém a separação prometida no AC7.
       roles: ADMINISTRATOR
+  health:
+    mail:
+      enabled: false
 
 logging:
   # Story 1.4: a configuração efetiva de appenders/encoders fica em
