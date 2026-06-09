@@ -23,7 +23,7 @@ import { landingFor } from "@/lib/landing";
  * Stories 2.x+ envolvem rotas restritas com `<RoleGuard roles={['ADMINISTRATOR']}>`.
  */
 export function RoleGuard({ roles, children }) {
-  const { isAuthenticated, isBootstrapping, profile } = useAuth();
+  const { isAuthenticated, isBootstrapping, profile, mustChangePassword } = useAuth();
   const location = useLocation();
 
   // Patch P4 (code review Story 1.5): se `roles` está declarado, profile=null
@@ -49,11 +49,25 @@ export function RoleGuard({ roles, children }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3) Perfil errado — manda para landing do perfil atual
+  // 3) Story 1.11 — troca de senha forçada. Bloqueia QUALQUER outra rota até a
+  // flag zerar (precede o profile check). Exceção: a própria /trocar-senha
+  // (senão loop infinito). Defesa em profundidade: usuário não consegue pular
+  // a tela alterando URL no navegador.
+  // Patch defer code review 2026-06-09 (D4): normaliza pathname antes do match
+  // — `/trocar-senha/` ou `/Trocar-Senha` agora também batem na exceção e não
+  // entram em redirect loop.
+  if (
+    mustChangePassword &&
+    location.pathname.replace(/\/$/, "").toLowerCase() !== "/trocar-senha"
+  ) {
+    return <Navigate to="/trocar-senha" replace />;
+  }
+
+  // 4) Perfil errado — manda para landing do perfil atual
   if (isProfileMismatch) {
     return <Navigate to={landingFor(profile)} replace />;
   }
 
-  // 4) Autorizado
+  // 5) Autorizado
   return children;
 }

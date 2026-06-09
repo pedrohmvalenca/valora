@@ -139,6 +139,12 @@ public class StudentController {
                 .profile(UserProfile.STUDENT)
                 .isActive(true)
                 .createdAt(now)
+                // Story 1.11: aluno nasce com mustChangePassword=true para forçar
+                // troca da provisória no primeiro acesso. Se o cadastro usou senha
+                // custom (req.password != null), também forçamos — não tem como
+                // distinguir "Coord digitou a definitiva" de "Coord digitou outra
+                // provisória", e o custo extra para o usuário é uma tela só.
+                .mustChangePassword(true)
                 .build();
         userRepo.save(user);
 

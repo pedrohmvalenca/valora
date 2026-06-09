@@ -138,6 +138,38 @@ public class AuthService implements UserDetailsService {
     }
 
     /**
+     * Troca de senha do usuário autenticado (Story 1.11).
+     *
+     * <p>Verifica {@code currentPassword} contra o hash atual. Falha →
+     * {@link BadCredentialsException} (401 via {@code GlobalExceptionHandler}).
+     * Sucesso: re-hash BCrypt cost 12 + zera a flag {@code mustChangePassword}.
+     *
+     * <p>Bean Validation de {@code newPassword} (mín. 8 chars) acontece no
+     * controller via {@code @Valid} — não duplica aqui.
+     */
+    @Transactional
+    public void changePassword(UUID userId, String currentPassword, String newPassword) {
+        // Patch code review 2026-06-09 (P2): se user do JWT foi deletado entre o
+        // login e a troca, lança BadCredentialsException em vez de EntityNotFoundException.
+        // Anti-enumeração (cliente não distingue "user removido" de "senha errada")
+        // + evita o frontend cair no toast genérico e ficar preso em /trocar-senha.
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("Troca de senha falhou (user não encontrado): userId={}", userId);
+                    return new BadCredentialsException("Credenciais inválidas");
+                });
+
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            log.warn("Troca de senha falhou (current errada): userId={}", userId);
+            throw new BadCredentialsException("Credenciais inválidas");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+    }
+
+    /**
      * Resolve os cursos vinculados conforme o perfil:
      * <ul>
      *   <li>{@code COORDINATOR}: lookup em {@code coordinator_course}.</li>

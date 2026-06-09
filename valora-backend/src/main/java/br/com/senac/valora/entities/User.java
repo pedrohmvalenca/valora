@@ -61,6 +61,16 @@ public class User implements UserDetails {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /**
+     * Força troca de senha no primeiro login (Story 1.11).
+     *
+     * <p>Setado para {@code true} no cadastro de aluno (POST /students) e zerado
+     * em {@code POST /auth/change-password}. Frontend usa para redirecionar
+     * o usuário para a tela de troca antes de liberar qualquer outra rota.
+     */
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword;
+
     // ============================================================
     // UserDetails — contrato Spring Security
     // ============================================================
