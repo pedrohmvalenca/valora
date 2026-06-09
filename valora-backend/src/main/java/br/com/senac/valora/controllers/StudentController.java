@@ -1,7 +1,9 @@
 package br.com.senac.valora.controllers;
 
 import br.com.senac.valora.dtos.CreateStudentRequest;
+import br.com.senac.valora.dtos.LinkStudentCoursesRequest;
 import br.com.senac.valora.dtos.StudentDto;
+import br.com.senac.valora.dtos.StudentSearchResultDto;
 import br.com.senac.valora.entities.EntityType;
 import br.com.senac.valora.entities.Student;
 import br.com.senac.valora.entities.User;
@@ -151,6 +153,79 @@ public class StudentController {
                 new StudentDto(s.getId(), s.getRegistrationCode(), s.getName(), s.getEmail(),
                         s.isActive(), req.courseIds(), s.getCreatedAt(),
                         generatedPassword ? rawPassword : null));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<StudentSearchResultDto>> search(@RequestParam("q") String q) {
+        String term = q == null ? "" : q.trim();
+        if (term.length() < 2) {
+            return ResponseEntity.ok(List.of());
+        }
+        String like = "%" + term + "%";
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = em.createNativeQuery(
+                "SELECT s.id, s.registration_code, s.name, s.email, s.is_active, "
+                + "(SELECT COUNT(*) FROM student_course sc WHERE sc.student_id = s.id) "
+                + "FROM students s "
+                + "WHERE s.name ILIKE :q OR s.email ILIKE :q OR s.registration_code ILIKE :q "
+                + "ORDER BY s.name ASC LIMIT 20")
+                .setParameter("q", like)
+                .getResultList();
+        List<StudentSearchResultDto> result = rows.stream()
+                .map(r -> new StudentSearchResultDto(
+                        (UUID) r[0],
+                        (String) r[1],
+                        (String) r[2],
+                        (String) r[3],
+                        (Boolean) r[4],
+                        ((Number) r[5]).intValue()))
+                .toList();
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{studentId}/courses")
+    @Transactional
+    public ResponseEntity<StudentDto> linkCourses(@PathVariable UUID studentId,
+                                                  @Valid @RequestBody LinkStudentCoursesRequest req,
+                                                  JwtAuthentication auth) {
+        Student s = studentRepo.findById(studentId).orElseThrow(() ->
+                new BusinessRuleException(ErrorCode.NOT_FOUND, "Aluno não encontrado: id=" + studentId));
+
+        List<UUID> linked = auth.profile() == UserProfile.COORDINATOR
+                ? ccRepo.findCourseIdsByCoordinatorId(auth.userId())
+                : null;
+
+        for (UUID courseId : req.courseIds()) {
+            if (courseRepo.findById(courseId).isEmpty()) {
+                throw new BusinessRuleException(ErrorCode.NOT_FOUND,
+                        "Curso não encontrado: id=" + courseId);
+            }
+            if (linked != null && !linked.contains(courseId)) {
+                throw new BusinessRuleException(ErrorCode.COORDINATOR_NOT_LINKED_TO_COURSE,
+                        "Coordenador não está vinculado ao curso");
+            }
+            em.createNativeQuery(
+                    "INSERT INTO student_course (student_id, course_id) VALUES (:sid, :cid) "
+                    + "ON CONFLICT (student_id, course_id) DO NOTHING")
+                    .setParameter("sid", studentId)
+                    .setParameter("cid", courseId)
+                    .executeUpdate();
+        }
+
+        auditService.recordEntityAction("LINK_STUDENT_COURSE", auth.userId(),
+                EntityType.STUDENT, studentId, req.courseIds().get(0));
+
+        @SuppressWarnings("unchecked")
+        List<UUID> courseIds = em.createNativeQuery(
+                "SELECT course_id FROM student_course WHERE student_id = :sid")
+                .setParameter("sid", studentId)
+                .getResultList()
+                .stream()
+                .map(o -> (UUID) o)
+                .toList();
+
+        return ResponseEntity.ok(new StudentDto(s.getId(), s.getRegistrationCode(), s.getName(),
+                s.getEmail(), s.isActive(), courseIds, s.getCreatedAt(), null));
     }
 
     private static String generateProvisionalPassword() {
