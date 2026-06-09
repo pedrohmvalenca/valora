@@ -54,3 +54,21 @@ export async function logout() {
     // Silencioso por design — backend down não pode bloquear logout local.
   }
 }
+
+/**
+ * Troca a senha do usuário autenticado — Story 1.11.
+ *
+ * Backend responde:
+ *   - 204 No Content em sucesso (zera users.must_change_password no banco).
+ *   - 401/AUTH_001 quando `currentPassword` está errada.
+ *   - 400/VAL_001 quando `newPassword` < 8 chars.
+ *
+ * O caller (TrocarSenha.jsx) inspeciona `error.response?.data?.code` para
+ * distinguir e mostrar o toast certo.
+ *
+ * @param {{ currentPassword: string, newPassword: string }} payload
+ * @returns {Promise<void>}
+ */
+export async function changePassword({ currentPassword, newPassword }) {
+  await api.post("/auth/change-password", { currentPassword, newPassword });
+}

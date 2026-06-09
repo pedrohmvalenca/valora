@@ -2,7 +2,6 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   BookOpen,
   FileCheck,
-  FileText,
   GraduationCap,
   History,
   Inbox,
@@ -25,20 +24,17 @@ import {
 import { cn } from "@/lib/utils";
 
 // Items da sidebar VALORA — UX § Sidebar permanente.
-// "Minhas Submissões" inclui ADMINISTRATOR intencionalmente (D3 do code review da Story 1.2):
-// admin precisa investigar problemas em submissões; visão admin terá distintivo
-// visual (badge/banner indicando modo admin).
-// TODO Story 5.1: renderizar variant visual distintivo quando profile === ADMINISTRATOR
-// (admin investigando submissões de aluno, não as próprias).
+// Story 1.12 (ADR-0007): STUDENT removido do Dashboard e item "Minhas Submissões"
+// removido por inteiro. Admin investiga submissões de aluno via /submissoes com
+// filtros (Story 5.x futura), não via /minhas-submissoes.
 const ITEMS = [
-  { to: "/", label: "Dashboard", Icon: LayoutDashboard, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR, Profile.STUDENT] },
+  { to: "/", label: "Dashboard", Icon: LayoutDashboard, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
   { to: "/pendencias", label: "Aguardando decisão", Icon: Inbox, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
   { to: "/cursos", label: "Cursos", Icon: BookOpen, roles: [Profile.ADMINISTRATOR] },
   { to: "/coordenadores", label: "Coordenadores", Icon: Users, roles: [Profile.ADMINISTRATOR] },
   { to: "/alunos", label: "Alunos", Icon: GraduationCap, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
   { to: "/categorias", label: "Categorias & Regras", Icon: Tags, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
   { to: "/submissoes", label: "Submissões", Icon: FileCheck, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
-  { to: "/minhas-submissoes", label: "Minhas Submissões", Icon: FileText, roles: [Profile.ADMINISTRATOR, Profile.STUDENT] },
   { to: "/logs", label: "Logs", Icon: History, roles: [Profile.ADMINISTRATOR] },
 ];
 

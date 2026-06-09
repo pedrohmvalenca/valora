@@ -1,9 +1,11 @@
 package br.com.senac.valora.controllers;
 
+import br.com.senac.valora.dtos.ChangePasswordRequest;
 import br.com.senac.valora.dtos.LoginRequest;
 import br.com.senac.valora.dtos.LoginResponse;
 import br.com.senac.valora.dtos.MeResponse;
 import br.com.senac.valora.dtos.UserDto;
+import br.com.senac.valora.entities.EntityType;
 import br.com.senac.valora.mappers.UserMapper;
 import br.com.senac.valora.security.JwtAuthentication;
 import br.com.senac.valora.services.AuditService;
@@ -119,6 +121,36 @@ public class AuthController {
 
         auditService.recordLogout(userId);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Troca de senha do usuário autenticado — Story 1.11.
+     *
+     * <p>Caminho de erro centralizado: senha atual errada → {@code BadCredentialsException}
+     * → 401/AUTH_001 via {@code GlobalExceptionHandler}; payload inválido →
+     * {@code MethodArgumentNotValidException} → 400/VAL_001.
+     *
+     * <p>Sucesso: 204 No Content (sem body — frontend já tem o user em memória).
+     * Audit assíncrono com action {@code CHANGE_PASSWORD} (sem payload — RNF-0003 / S2).
+     */
+    @PostMapping("/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest req,
+            JwtAuthentication auth) {
+        try {
+            authService.changePassword(auth.userId(), req.currentPassword(), req.newPassword());
+        } catch (org.springframework.security.authentication.BadCredentialsException ex) {
+            // Patch code review 2026-06-09 (P3): registra tentativa falha pra trilha
+            // de auditoria pegar brute-force da provisória (que antes só logava WARN).
+            // Rethrow para o GlobalExceptionHandler responder 401/AUTH_001 normalmente.
+            auditService.recordEntityAction("CHANGE_PASSWORD_FAILED", auth.userId(),
+                    EntityType.USER, auth.userId(), null);
+            throw ex;
+        }
+        auditService.recordEntityAction("CHANGE_PASSWORD", auth.userId(),
+                EntityType.USER, auth.userId(), null);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

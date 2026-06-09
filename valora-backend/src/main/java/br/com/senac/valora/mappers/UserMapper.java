@@ -24,5 +24,6 @@ public interface UserMapper {
     @Mapping(target = "name", source = "user.name")
     @Mapping(target = "profile", source = "user.profile")
     @Mapping(target = "linkedCourses", source = "linkedCourses")
+    @Mapping(target = "mustChangePassword", source = "user.mustChangePassword")
     UserDto toDto(User user, List<UUID> linkedCourses);
 }

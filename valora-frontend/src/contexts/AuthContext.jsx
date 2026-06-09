@@ -1,5 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import * as authService from "@/services/auth";
+import { Profile } from "@/lib/constants";
+
+// Story 1.12 (ADR-0007): chave no sessionStorage que sinaliza pro Login.jsx que
+// o bootstrap detectou cookie STUDENT no PWA — usado pra renderizar o banner
+// persistente em vez de toast (UX mais amistosa que toast em F5).
+const PWA_STUDENT_BLOCKED_KEY = "valora.pwa_student_blocked";
 
 /**
  * AuthContext real — Story 1.5.
@@ -37,7 +43,26 @@ export function AuthProvider({ children }) {
     (async () => {
       try {
         const data = await authService.me();
-        if (!cancelled) setUser(data?.user ?? null);
+        if (cancelled) return;
+        const fetched = data?.user ?? null;
+        // Story 1.12 (ADR-0007): cenário defensivo — cookie STUDENT chegou no PWA
+        // (improvável; mobile e PWA compartilham backend, mas alguém poderia
+        // ter setado manualmente ou clonado sessão do mobile). Tratamos como
+        // não-autenticado: logout silencioso + sinaliza /login pra mostrar banner.
+        if (fetched?.profile === Profile.STUDENT) {
+          try {
+            await authService.logout();
+          } catch {
+            // Backend offline não pode bloquear bootstrap; cookie ficará pendurado
+            // mas o user em memória já é null, então RoleGuard manda pro login.
+          }
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem(PWA_STUDENT_BLOCKED_KEY, "1");
+          }
+          if (!cancelled) setUser(null);
+        } else if (!cancelled) {
+          setUser(fetched);
+        }
       } catch {
         // 401 esperado quando cookie ausente/expirado/inválido — silencioso
         if (!cancelled) setUser(null);
@@ -72,17 +97,28 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Story 1.11: chamado pela página /trocar-senha após o POST /auth/change-password
+  // retornar 204 — zera a flag em memória sem precisar de round-trip extra em /auth/me.
+  // Backend já persistiu users.must_change_password=false; o próximo bootstrap puxa
+  // o estado correto. Update funcional para não tropeçar em re-renders concorrentes.
+  const markPasswordChanged = useCallback(() => {
+    setUser((u) => (u ? { ...u, mustChangePassword: false } : u));
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       profile: user?.profile ?? null,
       isAuthenticated: user !== null,
+      // Story 1.11: flag direta para RoleGuard sem precisar destrinchar user
+      mustChangePassword: Boolean(user?.mustChangePassword),
       isBootstrapping,
       isLoading,
       login,
       logout,
+      markPasswordChanged,
     }),
-    [user, isBootstrapping, isLoading, login, logout],
+    [user, isBootstrapping, isLoading, login, logout, markPasswordChanged],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
