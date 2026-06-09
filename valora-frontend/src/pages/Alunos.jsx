@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, GraduationCap, Plus, Search } from "lucide-react";
+import { ArrowLeft, GraduationCap, Plus, Search, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -35,6 +38,27 @@ export default function Alunos() {
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+
+  // Filtro inline da tabela (Story 3.9 — UX-A): busca client-side sobre `list`.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [courseFilter, setCourseFilter] = useState(null);
+
+  const filteredList = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return list.filter((s) => {
+      const matchesText =
+        !q ||
+        (s.name ?? "").toLowerCase().includes(q) ||
+        (s.registrationCode ?? "").toLowerCase().includes(q) ||
+        (s.email ?? "").toLowerCase().includes(q);
+      const matchesCourse =
+        !courseFilter ||
+        (Array.isArray(s.linkedCourseIds) && s.linkedCourseIds.includes(courseFilter));
+      return matchesText && matchesCourse;
+    });
+  }, [list, searchQuery, courseFilter]);
+
+  const searchInputRef = useRef(null);
 
   async function refresh() {
     setLoading(true);
@@ -300,6 +324,47 @@ export default function Alunos() {
         </Dialog>
       </div>
 
+      {/* Story 3.9 — Barra de busca + filtro de curso (client-side sobre `list`). */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1 sm:basis-3/5">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por matrícula, nome ou e-mail"
+            aria-label="Buscar aluno por matrícula, nome ou e-mail"
+            className="pl-9 pr-9"
+          />
+          {searchQuery.trim() && (
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(""); searchInputRef.current?.focus(); }}
+              aria-label="Limpar busca"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Select
+          value={courseFilter ?? "ALL"}
+          onValueChange={(value) => setCourseFilter(value === "ALL" ? null : value)}
+        >
+          <SelectTrigger className="sm:basis-2/5" aria-label="Filtrar por curso">
+            <SelectValue placeholder="Todos os cursos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Todos os cursos</SelectItem>
+            {courses.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                <span className="font-mono text-xs">{c.code}</span> — {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="border border-border rounded-lg">
         <Table>
           <TableHeader>
@@ -312,9 +377,44 @@ export default function Alunos() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando…</TableCell></TableRow>}
-            {!loading && list.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum aluno cadastrado/visível.</TableCell></TableRow>}
-            {!loading && list.map((s) => (
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando…</TableCell>
+              </TableRow>
+            )}
+            {!loading && list.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground" role="status">
+                  Nenhum aluno cadastrado/visível.
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading && list.length > 0 && filteredList.length === 0 && (
+              // key força remount do nó com role=status a cada mudança de filtro,
+              // garantindo que screen readers re-anunciem a mensagem (F6 do code review).
+              <TableRow key={`empty-${searchQuery}-${courseFilter ?? ""}`}>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground" role="status">
+                  {searchQuery ? (
+                    <>
+                      Nenhum aluno corresponde a <strong>"{searchQuery}"</strong> nos seus cursos. Talvez ele já exista em outro curso — use{" "}
+                      <strong>Adicionar aluno</strong> para buscar{" "}
+                      {/.+@.+/.test(searchQuery) ? (
+                        <><strong>pelo e-mail</strong> entre todos</>
+                      ) : (
+                        "entre todos"
+                      )}.
+                    </>
+                  ) : courseFilter ? (
+                    <>
+                      Nenhum aluno vinculado ao curso{" "}
+                      <strong>{courses.find((c) => c.id === courseFilter)?.code ?? "?"}</strong>{" "}
+                      nos seus cursos.
+                    </>
+                  ) : null}
+                </TableCell>
+              </TableRow>
+            )}
+            {!loading && filteredList.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-mono text-sm">{s.registrationCode}</TableCell>
                 <TableCell className="font-medium">{s.name}</TableCell>
