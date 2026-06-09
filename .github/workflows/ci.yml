@@ -23,4 +23,19 @@ jobs:
       - run: npm run lint
       - run: npm run build
 
-  # TODO Story 1.9 (Test Foundation): adicionar job 'backend' com setup-java@v4 + cd valora-backend && ./mvnw clean verify
+  backend:
+    name: Backend (test + package)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: valora-backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "maven"
+          cache-dependency-path: valora-backend/pom.xml
+      - run: chmod +x mvnw
+      - run: ./mvnw -B clean verify
