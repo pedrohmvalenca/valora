@@ -1,159 +1,75 @@
 package br.com.senac.valora.controllers;
 
 import br.com.senac.valora.dtos.CreateStudentRequest;
+import br.com.senac.valora.dtos.LinkStudentCoursesRequest;
+import br.com.senac.valora.dtos.StudentCourseStatusDto;
 import br.com.senac.valora.dtos.StudentDto;
-import br.com.senac.valora.entities.EntityType;
-import br.com.senac.valora.entities.Student;
-import br.com.senac.valora.entities.User;
-import br.com.senac.valora.entities.UserProfile;
-import br.com.senac.valora.exceptions.BusinessRuleException;
-import br.com.senac.valora.exceptions.ErrorCode;
-import br.com.senac.valora.repositories.CoordinatorCourseRepository;
-import br.com.senac.valora.repositories.CourseRepository;
-import br.com.senac.valora.repositories.StudentRepository;
-import br.com.senac.valora.repositories.UserRepository;
+import br.com.senac.valora.dtos.StudentSearchResultDto;
+import br.com.senac.valora.dtos.UpdateStudentCourseStatusRequest;
 import br.com.senac.valora.security.JwtAuthentication;
-import br.com.senac.valora.services.AuditService;
-import com.fasterxml.uuid.Generators;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import br.com.senac.valora.services.StudentService;
 import jakarta.validation.Valid;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Story Epic 3 (γ) — CRUD de alunos (Coord vê só vinculados, Admin vê tudo).
- *
- * Story 5.1: criar um aluno também cria um User(profile=STUDENT) com o mesmo id,
- * e-mail e senha provisória (BCrypt), habilitando o login do app mobile.
- */
 @RestController
 @RequestMapping("/api/v1/students")
 @PreAuthorize("hasAnyRole('COORDINATOR','ADMINISTRATOR')")
 public class StudentController {
 
-    private final StudentRepository studentRepo;
-    private final CourseRepository courseRepo;
-    private final CoordinatorCourseRepository ccRepo;
-    private final UserRepository userRepo;
-    private final BCryptPasswordEncoder passwordEncoder;
-    private final AuditService auditService;
+    private final StudentService studentService;
 
-    @PersistenceContext
-    private EntityManager em;
-
-    public StudentController(StudentRepository studentRepo, CourseRepository courseRepo,
-                             CoordinatorCourseRepository ccRepo, UserRepository userRepo,
-                             BCryptPasswordEncoder passwordEncoder, AuditService auditService) {
-        this.studentRepo = studentRepo;
-        this.courseRepo = courseRepo;
-        this.ccRepo = ccRepo;
-        this.userRepo = userRepo;
-        this.passwordEncoder = passwordEncoder;
-        this.auditService = auditService;
+    public StudentController(StudentService studentService) {
+        this.studentService = studentService;
     }
 
     @GetMapping
     public ResponseEntity<List<StudentDto>> list(JwtAuthentication auth) {
-        List<Student> students;
-        if (auth.profile() == UserProfile.ADMINISTRATOR) {
-            students = studentRepo.findAll();
-        } else {
-            List<UUID> linked = ccRepo.findCourseIdsByCoordinatorId(auth.userId());
-            students = linked.isEmpty() ? List.of() : studentRepo.findAllInCourses(linked);
-        }
-        List<StudentDto> result = students.stream().map(s -> {
-            @SuppressWarnings("unchecked")
-            List<UUID> courseIds = em.createNativeQuery(
-                    "SELECT course_id FROM student_course WHERE student_id = :sid")
-                    .setParameter("sid", s.getId())
-                    .getResultList()
-                    .stream()
-                    .map(o -> (UUID) o)
-                    .toList();
-            return new StudentDto(s.getId(), s.getRegistrationCode(), s.getName(), s.getEmail(),
-                    s.isActive(), courseIds, s.getCreatedAt(), null);
-        }).toList();
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(studentService.list(auth));
     }
 
     @PostMapping
-    @Transactional
     public ResponseEntity<StudentDto> create(@Valid @RequestBody CreateStudentRequest req,
                                              JwtAuthentication auth) {
-        // Validar que todos os cursos existem
-        for (UUID courseId : req.courseIds()) {
-            if (courseRepo.findById(courseId).isEmpty()) {
-                throw new BusinessRuleException(ErrorCode.NOT_FOUND,
-                        "Curso não encontrado: id=" + courseId);
-            }
-            // Coord só pode vincular alunos a seus próprios cursos
-            if (auth.profile() == UserProfile.COORDINATOR) {
-                List<UUID> linked = ccRepo.findCourseIdsByCoordinatorId(auth.userId());
-                if (!linked.contains(courseId)) {
-                    throw new BusinessRuleException(ErrorCode.COORDINATOR_NOT_LINKED_TO_COURSE,
-                            "Coordenador não está vinculado ao curso");
-                }
-            }
-        }
-
-        String email = req.email().trim().toLowerCase();
-        if (userRepo.findByEmail(email).isPresent()) {
-            throw new BusinessRuleException(ErrorCode.DATA_INTEGRITY_VIOLATION,
-                    "E-mail já está em uso: " + email);
-        }
-
-        boolean generatedPassword = req.password() == null || req.password().isBlank();
-        String rawPassword = generatedPassword ? generateProvisionalPassword() : req.password();
-
-        UUID id = Generators.timeBasedEpochGenerator().generate();
-        Instant now = Instant.now();
-        Student s = Student.builder()
-                .id(id)
-                .registrationCode(req.registrationCode().trim())
-                .name(req.name().trim())
-                .email(email)
-                .isActive(true)
-                .createdAt(now)
-                .build();
-        studentRepo.save(s);
-
-        User user = User.builder()
-                .id(id)
-                .email(email)
-                .passwordHash(passwordEncoder.encode(rawPassword))
-                .name(s.getName())
-                .profile(UserProfile.STUDENT)
-                .isActive(true)
-                .createdAt(now)
-                .build();
-        userRepo.save(user);
-
-        for (UUID courseId : req.courseIds()) {
-            em.createNativeQuery(
-                    "INSERT INTO student_course (student_id, course_id) VALUES (:sid, :cid)")
-                    .setParameter("sid", id)
-                    .setParameter("cid", courseId)
-                    .executeUpdate();
-        }
-
-        auditService.recordEntityAction("CREATE_STUDENT", auth.userId(),
-                EntityType.STUDENT, id, req.courseIds().isEmpty() ? null : req.courseIds().get(0));
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                new StudentDto(s.getId(), s.getRegistrationCode(), s.getName(), s.getEmail(),
-                        s.isActive(), req.courseIds(), s.getCreatedAt(),
-                        generatedPassword ? rawPassword : null));
+        StudentDto created = studentService.create(req, auth);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    private static String generateProvisionalPassword() {
-        return UUID.randomUUID().toString().substring(0, 8);
+    @GetMapping("/search")
+    public ResponseEntity<List<StudentSearchResultDto>> search(@RequestParam("q") String q) {
+        return ResponseEntity.ok(studentService.search(q));
+    }
+
+    @PostMapping("/{studentId}/courses")
+    public ResponseEntity<StudentDto> linkCourses(@PathVariable UUID studentId,
+                                                  @Valid @RequestBody LinkStudentCoursesRequest req,
+                                                  JwtAuthentication auth) {
+        return ResponseEntity.ok(studentService.linkCourses(studentId, req, auth));
+    }
+
+    @GetMapping("/{studentId}/courses")
+    public ResponseEntity<List<StudentCourseStatusDto>> listCoursesWithStatus(
+            @PathVariable UUID studentId, JwtAuthentication auth) {
+        return ResponseEntity.ok(studentService.listCoursesWithStatus(studentId, auth));
+    }
+
+    @PatchMapping("/{studentId}/courses/{courseId}/status")
+    public ResponseEntity<StudentCourseStatusDto> updateCourseStatus(
+            @PathVariable UUID studentId,
+            @PathVariable UUID courseId,
+            @Valid @RequestBody UpdateStudentCourseStatusRequest req,
+            JwtAuthentication auth) {
+        return ResponseEntity.ok(studentService.updateCourseStatus(studentId, courseId, req, auth));
     }
 }

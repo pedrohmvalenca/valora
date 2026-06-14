@@ -21,8 +21,11 @@ export function landingFor(profile) {
       return "/";
     case Profile.COORDINATOR:
       return "/submissoes";
-    case Profile.STUDENT:
-      return "/minhas-submissoes";
+    // Story 1.12 (ADR-0007): STUDENT é mobile-only. PWA bloqueia esse perfil já no
+    // login (Login.jsx + AuthContext bootstrap), então este switch nunca recebe
+    // STUDENT em runtime. O default "/" abaixo é defesa em profundidade — se algum
+    // dia o bloqueio falhar, o usuário cai no Dashboard (que tem RoleGuard,
+    // que rebate pra /login).
     default:
       return "/";
   }

@@ -24,6 +24,9 @@ export const studentsApi = {
   list: async () => (await api.get("/students")).data,
   create: async ({ registrationCode, name, email, courseIds }) =>
     (await api.post("/students", { registrationCode, name, email, courseIds })).data,
+  search: async (q) => (await api.get("/students/search", { params: { q } })).data,
+  linkCourses: async (studentId, courseIds) =>
+    (await api.post(`/students/${studentId}/courses`, { courseIds })).data,
 };
 
 // ============ Categorias (Coord+Admin) ============

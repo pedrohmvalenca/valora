@@ -28,6 +28,13 @@ export async function getSubmissionDetail(id) {
   return data;
 }
 
+export async function getSubmissionProof(id) {
+  const response = await api.get(`/submissions/${id}/proof`, { responseType: "blob" });
+  const blob = response.data;
+  const contentType = response.headers["content-type"] || blob.type || "application/octet-stream";
+  return { url: URL.createObjectURL(blob), contentType };
+}
+
 export async function approveSubmission(id, recognizedHours = null) {
   // Aprovação parcial (Story 4.5 nível C): se passar recognizedHours, aprova
   // com horas ajustadas. Sem argumento, aprova com requested (caminho normal).
