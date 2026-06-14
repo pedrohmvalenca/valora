@@ -1,6 +1,4 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
@@ -10,86 +8,68 @@ import * as authService from "@/services/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 
-/**
- * Tela de troca forçada — Story 1.11.
- *
- * Renderizada quando `mustChangePassword=true`. RoleGuard impede acesso a
- * qualquer outra rota até a troca ser concluída — esta página é a única saída
- * autenticada (logout também — botão em outra UI; sair > entrar > insistir
- * ainda cai aqui).
- *
- * Dev Notes (spec): senha atual NÃO é pré-preenchida — pré-preencher cria viés
- * de "confirmar sem ler" e degrada o efeito de segurança. Usuário precisa
- * digitar a provisória que recebeu para provar que a teve em mãos.
- *
- * Política da story: mínimo 8 chars; sem complexidade obrigatória.
- */
-const schema = z
-  .object({
-    currentPassword: z.string().min(1, "Senha atual é obrigatória"),
-    newPassword: z
-      .string()
-      .min(8, "Nova senha deve ter ao menos 8 caracteres")
-      .max(100, "Nova senha muito longa"),
-    confirmPassword: z.string().min(1, "Confirme a nova senha"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "As senhas não coincidem",
-    path: ["confirmPassword"],
-  })
-  .refine((data) => data.newPassword !== data.currentPassword, {
-    message: "A nova senha não pode ser igual à atual",
-    path: ["newPassword"],
-  });
+function validatePasswords(currentPassword, newPassword, confirmPassword) {
+  const errors = {};
+  if (!currentPassword) {
+    errors.currentPassword = "Senha atual é obrigatória";
+  }
+  if (!newPassword) {
+    errors.newPassword = "Nova senha é obrigatória";
+  } else if (newPassword.length < 8) {
+    errors.newPassword = "Nova senha deve ter ao menos 8 caracteres";
+  } else if (newPassword.length > 100) {
+    errors.newPassword = "Nova senha muito longa";
+  } else if (currentPassword && newPassword === currentPassword) {
+    errors.newPassword = "A nova senha não pode ser igual à atual";
+  }
+  if (!confirmPassword) {
+    errors.confirmPassword = "Confirme a nova senha";
+  } else if (newPassword && confirmPassword !== newPassword) {
+    errors.confirmPassword = "As senhas não coincidem";
+  }
+  return errors;
+}
 
 export default function TrocarSenha() {
   const { profile, markPasswordChanged } = useAuth();
   const navigate = useNavigate();
 
-  const form = useForm({
-    resolver: zodResolver(schema),
-    mode: "onBlur",
-    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
-  });
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function onSubmit({ currentPassword, newPassword }) {
+  async function handleSubmit(event) {
+    event.preventDefault();
+    const validationErrors = validatePasswords(currentPassword, newPassword, confirmPassword);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setIsSubmitting(true);
     try {
       await authService.changePassword({ currentPassword, newPassword });
-      // Sucesso (204): zera flag local e libera o restante do app.
       markPasswordChanged();
       toast.success("Senha alterada com sucesso");
       navigate(landingFor(profile), { replace: true });
     } catch (error) {
       const code = error.response?.data?.code;
       if (code === "AUTH_001") {
-        // Senha atual errada — feedback no campo, sem dar dica sobre a regra.
-        form.setError("currentPassword", { message: "Senha atual incorreta" });
+        setErrors({ currentPassword: "Senha atual incorreta" });
         toast.error("Senha atual incorreta");
       } else if (code === "AUTH_002") {
-        // Sessão expirou no meio do preenchimento — RoleGuard vai pegar no
-        // próximo render (user vira null → /login), mas avisamos o usuário pra
-        // ele não ficar olhando pro form sem entender.
         toast.error("Sessão expirou — entre novamente para trocar a senha");
         navigate("/login", { replace: true });
       } else if (code === "VAL_001") {
-        // Validação backend (defesa em profundidade — zod já deveria ter pego).
         toast.error("Verifique os campos e tente novamente");
       } else {
         toast.error("Erro inesperado — tente novamente em instantes");
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
-
-  const { isSubmitting } = form.formState;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -102,59 +82,61 @@ export default function TrocarSenha() {
         </CardHeader>
 
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
-              <FormField
-                control={form.control}
-                name="currentPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha atual (provisória)</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoComplete="current-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <div className="space-y-2">
+              <label htmlFor="currentPassword" className="text-sm font-medium">
+                Senha atual (provisória)
+              </label>
+              <Input
+                id="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
               />
+              {errors.currentPassword && (
+                <p className="text-sm text-destructive">{errors.currentPassword}</p>
+              )}
+            </div>
 
-              <FormField
-                control={form.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nova senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoComplete="new-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="space-y-2">
+              <label htmlFor="newPassword" className="text-sm font-medium">Nova senha</label>
+              <Input
+                id="newPassword"
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
               />
+              {errors.newPassword && (
+                <p className="text-sm text-destructive">{errors.newPassword}</p>
+              )}
+            </div>
 
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirme a nova senha</FormLabel>
-                    <FormControl>
-                      <Input type="password" autoComplete="new-password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="text-sm font-medium">
+                Confirme a nova senha
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
               />
+              {errors.confirmPassword && (
+                <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+              )}
+            </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Salvando..." : "Trocar senha"}
-              </Button>
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : "Trocar senha"}
+            </Button>
 
-              <p className="text-xs text-muted-foreground text-center">
-                Mínimo 8 caracteres.
-              </p>
-            </form>
-          </Form>
+            <p className="text-xs text-muted-foreground text-center">
+              Mínimo 8 caracteres.
+            </p>
+          </form>
         </CardContent>
 
         <CardFooter className="text-xs text-muted-foreground justify-center">
