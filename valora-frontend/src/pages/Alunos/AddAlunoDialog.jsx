@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Search } from "lucide-react";
 
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { studentsApi } from "@/services/admin";
 
@@ -23,17 +24,20 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState(null);
   const [linkCourseIds, setLinkCourseIds] = useState([]);
+  const [alreadyLinked, setAlreadyLinked] = useState([]);
   const [linking, setLinking] = useState(false);
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+
+  const listCoursesTokenRef = useRef(0);
 
   useEffect(() => {
     if (!open || mode !== "search") return;
     const term = query.trim();
     if (term.length < 2) { setResults([]); return; }
     setSearching(true);
-    const t = setTimeout(async () => {
+    const searchTimeout = setTimeout(async () => {
       try {
         setResults(await studentsApi.search(term));
       } catch {
@@ -42,16 +46,18 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
         setSearching(false);
       }
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(searchTimeout);
   }, [query, open, mode]);
 
   function resetDialog() {
+    listCoursesTokenRef.current++;
     setMode("search");
     setQuery("");
     setResults([]);
     setSearching(false);
     setSelected(null);
     setLinkCourseIds([]);
+    setAlreadyLinked([]);
     setForm(EMPTY_FORM);
   }
 
@@ -73,9 +79,24 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
     }));
   }
 
-  function selectResult(student) {
+  async function selectResult(student) {
+    if (selected?.id === student.id) return;
+    const token = ++listCoursesTokenRef.current;
     setSelected(student);
-    setLinkCourseIds([]);
+    try {
+      const linked = await studentsApi.listCourses(student.id);
+      if (token !== listCoursesTokenRef.current) return;
+      const ids = Array.isArray(linked) ? linked.map((c) => c.courseId).filter(Boolean) : [];
+      setAlreadyLinked(ids);
+      setLinkCourseIds(ids);
+    } catch (err) {
+      if (token !== listCoursesTokenRef.current) return;
+      console.error("[AddAlunoDialog.listCourses]", err);
+      setAlreadyLinked([]);
+      setLinkCourseIds([]);
+      setSelected(null);
+      toast.error("Não foi possível carregar os cursos atuais do aluno");
+    }
   }
 
   function goCreate() {
@@ -130,9 +151,17 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4 mr-1" /> Adicionar aluno</Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button aria-label="Adicionar aluno ao curso">
+              <Plus className="h-4 w-4 sm:mr-1" aria-hidden="true" />
+              <span className="hidden sm:inline">Adicionar aluno ao curso</span>
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Cadastra um novo aluno ou vincula um existente a um dos seus cursos.</TooltipContent>
+      </Tooltip>
       <DialogContent>
         {mode === "search" ? (
           <>
@@ -198,12 +227,22 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
                   </p>
                   <div className="space-y-2 max-h-36 overflow-y-auto">
                     {courses.length === 0 && <p className="text-xs text-muted-foreground">Sem cursos disponíveis.</p>}
-                    {courses.map((c) => (
-                      <label key={c.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                        <Checkbox checked={linkCourseIds.includes(c.id)} onCheckedChange={() => toggleLinkCourse(c.id)} />
-                        <span><span className="font-mono text-xs">{c.code}</span> — {c.name}</span>
-                      </label>
-                    ))}
+                    {courses.map((c) => {
+                      const isLocked = alreadyLinked.includes(c.id);
+                      return (
+                        <label key={c.id} className={`flex items-center gap-2 text-sm ${isLocked ? "opacity-70" : "cursor-pointer"}`}>
+                          <Checkbox
+                            checked={linkCourseIds.includes(c.id)}
+                            onCheckedChange={() => toggleLinkCourse(c.id)}
+                            disabled={isLocked}
+                          />
+                          <span>
+                            <span className="font-mono text-xs">{c.code}</span> — {c.name}
+                            {isLocked && <span className="text-muted-foreground"> (já vinculado)</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                   <Button size="sm" onClick={handleLink} disabled={linking}>
                     {linking ? "Vinculando…" : "Vincular ao(s) curso(s)"}
