@@ -55,4 +55,16 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
     boolean existsByStudentIdAndCategoryIdAndStatus(UUID studentId, UUID categoryId, SubmissionStatus status);
 
     long countByStudentIdAndCourseIdAndStatus(UUID studentId, UUID courseId, SubmissionStatus status);
+
+    @Query("SELECT s.categoryId, COALESCE(SUM(s.recognizedHours), 0) FROM Submission s "
+            + "WHERE s.status = 'APPROVED' GROUP BY s.categoryId")
+    List<Object[]> sumApprovedHoursByCategoryAll();
+
+    @Query("SELECT s.categoryId, COALESCE(SUM(s.recognizedHours), 0) FROM Submission s "
+            + "WHERE s.status = 'APPROVED' AND s.courseId = :courseId GROUP BY s.categoryId")
+    List<Object[]> sumApprovedHoursByCategoryForCourse(@Param("courseId") UUID courseId);
+
+    @Query("SELECT s.categoryId, COALESCE(SUM(s.recognizedHours), 0) FROM Submission s "
+            + "WHERE s.status = 'APPROVED' AND s.courseId IN :courseIds GROUP BY s.categoryId")
+    List<Object[]> sumApprovedHoursByCategoryForCourses(@Param("courseIds") List<UUID> courseIds);
 }

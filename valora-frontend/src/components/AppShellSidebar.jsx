@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 // removido por inteiro. Admin investiga submissões de aluno via /submissoes com
 // filtros (Story 5.x futura), não via /minhas-submissoes.
 const ITEMS = [
-  { to: "/", label: "Dashboard", Icon: LayoutDashboard, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
+  { to: "/dashboard", label: "Dashboard", Icon: LayoutDashboard, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
   { to: "/pendencias", label: "Aguardando decisão", Icon: Inbox, roles: [Profile.ADMINISTRATOR, Profile.COORDINATOR] },
   { to: "/cursos", label: "Cursos", Icon: BookOpen, roles: [Profile.ADMINISTRATOR] },
   { to: "/coordenadores", label: "Coordenadores", Icon: Users, roles: [Profile.ADMINISTRATOR] },
