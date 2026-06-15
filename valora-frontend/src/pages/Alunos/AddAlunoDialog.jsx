@@ -24,6 +24,7 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState(null);
   const [linkCourseIds, setLinkCourseIds] = useState([]);
+  const [alreadyLinked, setAlreadyLinked] = useState([]);
   const [linking, setLinking] = useState(false);
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -56,6 +57,7 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
     setSearching(false);
     setSelected(null);
     setLinkCourseIds([]);
+    setAlreadyLinked([]);
     setForm(EMPTY_FORM);
   }
 
@@ -85,11 +87,14 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
       const linked = await studentsApi.listCourses(student.id);
       if (token !== listCoursesTokenRef.current) return;
       const ids = Array.isArray(linked) ? linked.map((c) => c.courseId).filter(Boolean) : [];
+      setAlreadyLinked(ids);
       setLinkCourseIds(ids);
     } catch (err) {
       if (token !== listCoursesTokenRef.current) return;
       console.error("[AddAlunoDialog.listCourses]", err);
+      setAlreadyLinked([]);
       setLinkCourseIds([]);
+      setSelected(null);
       toast.error("Não foi possível carregar os cursos atuais do aluno");
     }
   }
@@ -222,12 +227,22 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
                   </p>
                   <div className="space-y-2 max-h-36 overflow-y-auto">
                     {courses.length === 0 && <p className="text-xs text-muted-foreground">Sem cursos disponíveis.</p>}
-                    {courses.map((c) => (
-                      <label key={c.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                        <Checkbox checked={linkCourseIds.includes(c.id)} onCheckedChange={() => toggleLinkCourse(c.id)} />
-                        <span><span className="font-mono text-xs">{c.code}</span> — {c.name}</span>
-                      </label>
-                    ))}
+                    {courses.map((c) => {
+                      const isLocked = alreadyLinked.includes(c.id);
+                      return (
+                        <label key={c.id} className={`flex items-center gap-2 text-sm ${isLocked ? "opacity-70" : "cursor-pointer"}`}>
+                          <Checkbox
+                            checked={linkCourseIds.includes(c.id)}
+                            onCheckedChange={() => toggleLinkCourse(c.id)}
+                            disabled={isLocked}
+                          />
+                          <span>
+                            <span className="font-mono text-xs">{c.code}</span> — {c.name}
+                            {isLocked && <span className="text-muted-foreground"> (já vinculado)</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                   <Button size="sm" onClick={handleLink} disabled={linking}>
                     {linking ? "Vinculando…" : "Vincular ao(s) curso(s)"}
