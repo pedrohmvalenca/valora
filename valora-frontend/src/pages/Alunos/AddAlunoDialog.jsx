@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Search } from "lucide-react";
 
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { studentsApi } from "@/services/admin";
 
@@ -28,12 +29,14 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
 
+  const listCoursesTokenRef = useRef(0);
+
   useEffect(() => {
     if (!open || mode !== "search") return;
     const term = query.trim();
     if (term.length < 2) { setResults([]); return; }
     setSearching(true);
-    const t = setTimeout(async () => {
+    const searchTimeout = setTimeout(async () => {
       try {
         setResults(await studentsApi.search(term));
       } catch {
@@ -42,10 +45,11 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
         setSearching(false);
       }
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(searchTimeout);
   }, [query, open, mode]);
 
   function resetDialog() {
+    listCoursesTokenRef.current++;
     setMode("search");
     setQuery("");
     setResults([]);
@@ -73,9 +77,21 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
     }));
   }
 
-  function selectResult(student) {
+  async function selectResult(student) {
+    if (selected?.id === student.id) return;
+    const token = ++listCoursesTokenRef.current;
     setSelected(student);
-    setLinkCourseIds([]);
+    try {
+      const linked = await studentsApi.listCourses(student.id);
+      if (token !== listCoursesTokenRef.current) return;
+      const ids = Array.isArray(linked) ? linked.map((c) => c.courseId).filter(Boolean) : [];
+      setLinkCourseIds(ids);
+    } catch (err) {
+      if (token !== listCoursesTokenRef.current) return;
+      console.error("[AddAlunoDialog.listCourses]", err);
+      setLinkCourseIds([]);
+      toast.error("Não foi possível carregar os cursos atuais do aluno");
+    }
   }
 
   function goCreate() {
@@ -130,9 +146,17 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button><Plus className="h-4 w-4 mr-1" /> Adicionar aluno</Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button aria-label="Adicionar aluno ao curso">
+              <Plus className="h-4 w-4 sm:mr-1" aria-hidden="true" />
+              <span className="hidden sm:inline">Adicionar aluno ao curso</span>
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Cadastra um novo aluno ou vincula um existente a um dos seus cursos.</TooltipContent>
+      </Tooltip>
       <DialogContent>
         {mode === "search" ? (
           <>
