@@ -172,7 +172,11 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
   async function closePasswordDialog() {
     setCreatedStudent(null);
     setCopied(false);
-    await onSuccess();
+    try {
+      await onSuccess();
+    } catch {
+      toast.error("Erro ao atualizar lista de alunos. Recarregue a página.");
+    }
   }
 
   return (
