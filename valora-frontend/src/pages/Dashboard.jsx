@@ -30,11 +30,13 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadCourses() {
       try {
+        const list = await coursesApi.list();
         if (isAdmin) {
-          const list = await coursesApi.list();
           setCourses(list);
         } else {
-          setCourses(Array.isArray(user?.linkedCourses) ? user.linkedCourses : []);
+          const linkedIds = (Array.isArray(user?.linkedCourses) ? user.linkedCourses : [])
+            .map((c) => c?.id ?? c);
+          setCourses(list.filter((c) => linkedIds.includes(c.id)));
         }
       } catch {
         toast.error("Erro ao carregar cursos");
