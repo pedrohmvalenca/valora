@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Search } from "lucide-react";
+import { ArrowLeft, Check, Copy, Plus, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
   const [submitting, setSubmitting] = useState(false);
 
   const listCoursesTokenRef = useRef(0);
+
+  const [createdStudent, setCreatedStudent] = useState(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!open || mode !== "search") return;
@@ -133,15 +136,22 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
     if (form.courseIds.length === 0) { toast.error("Vincule ao menos 1 curso"); return; }
     setSubmitting(true);
     try {
-      await studentsApi.create({
+      const student = await studentsApi.create({
         registrationCode: form.registrationCode.trim(),
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         courseIds: form.courseIds,
       });
-      toast.success(`Aluno "${form.name}" cadastrado`);
-      handleOpenChange(false);
-      await onSuccess();
+      if (student?.provisionalPassword) {
+        setCreatedStudent({ name: student.name, provisionalPassword: student.provisionalPassword });
+        setCopied(false);
+        onOpenChange(false);
+        resetDialog();
+      } else {
+        toast.success(`Aluno "${form.name}" cadastrado`);
+        handleOpenChange(false);
+        await onSuccess();
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Erro ao criar aluno");
     } finally {
@@ -149,7 +159,24 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
     }
   }
 
+  async function copyPassword() {
+    if (!createdStudent) return;
+    try {
+      await navigator.clipboard.writeText(createdStudent.provisionalPassword);
+      setCopied(true);
+    } catch {
+      toast.error("Não foi possível copiar. Selecione o texto e copie manualmente.");
+    }
+  }
+
+  async function closePasswordDialog() {
+    setCreatedStudent(null);
+    setCopied(false);
+    await onSuccess();
+  }
+
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <Tooltip>
         <TooltipTrigger asChild>
@@ -301,5 +328,48 @@ export default function AddAlunoDialog({ open, onOpenChange, courses, onSuccess 
         )}
       </DialogContent>
     </Dialog>
+
+    <Dialog open={createdStudent !== null} onOpenChange={(next) => { if (!next) closePasswordDialog(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Aluno cadastrado com sucesso</DialogTitle>
+          <DialogDescription>
+            Anote ou copie a senha provisória abaixo e envie para o aluno. Ela será exigida no primeiro login.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs text-muted-foreground">Aluno</Label>
+            <p className="text-sm font-medium">{createdStudent?.name}</p>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Senha provisória</Label>
+            <div className="flex items-center gap-2 mt-1">
+              <Input
+                readOnly
+                value={createdStudent?.provisionalPassword ?? ""}
+                className="font-mono text-base tracking-wide"
+                onFocus={(e) => e.target.select()}
+              />
+              <Button type="button" variant="outline" onClick={copyPassword}>
+                {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+                {copied ? "Copiado" : "Copiar senha"}
+              </Button>
+            </div>
+          </div>
+          {!copied && (
+            <p className="text-xs text-muted-foreground">
+              Copie a senha antes de fechar — ela não será exibida novamente.
+            </p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={closePasswordDialog}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
