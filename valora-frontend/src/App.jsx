@@ -13,6 +13,7 @@ import TrocarSenha from "@/pages/TrocarSenha";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import Submissoes from "@/pages/Submissoes";
+import Dashboard from "@/pages/Dashboard";
 import Cursos from "@/pages/Cursos";
 import Coordenadores from "@/pages/Coordenadores";
 import Alunos from "@/pages/Alunos";
@@ -88,6 +89,14 @@ function AppRoutes() {
       />
       <Route element={<ProtectedShell />}>
         <Route path="/" element={<IndexRedirect />} />
+        <Route
+          path="/dashboard"
+          element={
+            <RoleGuard roles={[Profile.COORDINATOR, Profile.ADMINISTRATOR]}>
+              <Dashboard />
+            </RoleGuard>
+          }
+        />
         {/* Story 4.5 (consolidada γ) — página real */}
         <Route
           path="/submissoes"

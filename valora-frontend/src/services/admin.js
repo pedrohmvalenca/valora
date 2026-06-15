@@ -35,3 +35,12 @@ export const categoriesApi = {
   create: async ({ name, groupType, description, courseLimits }) =>
     (await api.post("/categories", { name, groupType, description, courseLimits })).data,
 };
+
+// ============ Dashboard (Coord+Admin) ============
+export const dashboardApi = {
+  coordinator: async ({ courseId } = {}) => {
+    const params = {};
+    if (courseId) params.courseId = courseId;
+    return (await api.get("/dashboard/coordinator", { params })).data;
+  },
+};
